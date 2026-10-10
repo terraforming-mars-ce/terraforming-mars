@@ -11,6 +11,8 @@ import {
   ListGamesResponse,
   ListCardsResponse,
   ListMilestonesAwardsResponse,
+  MetaResponse,
+  ChangelogResponse,
 } from "../types/generated/api-types.ts";
 import { config } from "../config";
 
@@ -19,6 +21,26 @@ export class ApiService {
 
   constructor(baseUrl: string = config.apiUrl) {
     this.baseUrl = baseUrl;
+  }
+
+  async getMeta(): Promise<MetaResponse> {
+    const response = await fetch(`${this.baseUrl}/meta`, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`Could not load server info: ${response.status}`);
+    }
+    return response.json();
+  }
+
+  async getChangelog(signal?: AbortSignal): Promise<ChangelogResponse> {
+    const response = await fetch(`${this.baseUrl}/changelog`, { cache: "no-store", signal });
+    if (!response.ok) {
+      throw new Error(`Could not load changelog: ${response.status}`);
+    }
+    return response.json();
+  }
+
+  changelogImageUrl(version: string, file: string): string {
+    return `${this.baseUrl}/changelog/${encodeURIComponent(version)}/${encodeURIComponent(file)}`;
   }
 
   async getGameOptions(signal?: AbortSignal): Promise<GameOptionsDto> {

@@ -13,11 +13,13 @@ import {
   CardsIcon,
   ThoughtIcon,
   InstallIcon,
+  ChangelogIcon,
 } from "./menuIcons.tsx";
 import SoundToggleButton from "./buttons/SoundToggleButton.tsx";
 import { useHoverSound } from "@/hooks/useHoverSound.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
+import { useVersionStore } from "@/stores/versionStore.ts";
 import { useBotThoughtsPreferenceStore } from "@/stores/botPresenceStore.ts";
 import {
   isFullscreen as readIsFullscreen,
@@ -155,6 +157,17 @@ export const GameMenuItems: React.FC<GameMenuItemsProps> = ({
           menuItemHover.onClick?.();
           onClose();
           window.dispatchEvent(new CustomEvent("toggle-performance-window"));
+        }}
+        onMouseEnter={menuItemHover.onMouseEnter}
+      />
+      <MenuPopoverDivider />
+      <MenuPopoverItem
+        icon={<ChangelogIcon />}
+        label="Changelog"
+        onClick={() => {
+          menuItemHover.onClick?.();
+          onClose();
+          useVersionStore.getState().openChangelog();
         }}
         onMouseEnter={menuItemHover.onMouseEnter}
       />

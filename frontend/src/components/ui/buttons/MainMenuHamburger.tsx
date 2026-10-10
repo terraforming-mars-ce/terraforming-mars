@@ -15,12 +15,14 @@ import {
   HomeIcon,
   ServerIcon,
   CardsIcon,
+  ChangelogIcon,
 } from "../menuIcons.tsx";
 import MobileMenuDrawer, { MobileMenuButton } from "../../mobile/MobileMenuDrawer.tsx";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
 import { useGameStore } from "@/stores/gameStore.ts";
 import { useUIOverlayStore } from "@/stores/uiOverlayStore.ts";
+import { useVersionStore } from "@/stores/versionStore.ts";
 import {
   isFullscreen as readIsFullscreen,
   isFullscreenSupported,
@@ -73,6 +75,11 @@ export const MainMenuItems: React.FC<MainMenuProps & { onClose: () => void }> = 
     } else {
       changeServer();
     }
+  }, [onClose]);
+
+  const handleChangelog = useCallback(() => {
+    onClose();
+    useVersionStore.getState().openChangelog();
   }, [onClose]);
 
   const handleFeedback = useCallback(() => {
@@ -160,6 +167,8 @@ export const MainMenuItems: React.FC<MainMenuProps & { onClose: () => void }> = 
           />
         </>
       )}
+      <MenuPopoverDivider />
+      <MenuPopoverItem icon={<ChangelogIcon />} label="Changelog" onClick={handleChangelog} />
       <MenuPopoverDivider />
       <MenuPopoverItem icon={<FeedbackIcon />} label="Feedback" onClick={handleFeedback} />
       {onLeaveGame && (

@@ -1344,6 +1344,9 @@ code {
   .menu-modal-lobby {
     width: 1100px;
   }
+  .menu-modal-wide {
+    width: 1350px;
+  }
   .menu-modal-panel {
     display: flex;
     flex-direction: column;

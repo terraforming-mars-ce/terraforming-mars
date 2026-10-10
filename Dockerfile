@@ -55,6 +55,7 @@ RUN curl -fsSL https://claude.ai/install.sh | bash && \
 COPY --from=server /build/server .
 COPY --from=server /build/assets ./assets
 COPY --from=web /build/frontend/build ./web
+COPY changelog/ ./changelog
 
 # Source code for Claude bug report analysis
 COPY backend/internal/ /repo/backend/internal/

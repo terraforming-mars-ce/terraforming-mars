@@ -2,6 +2,9 @@ import GameButton from "@/components/ui/buttons/GameButton.tsx";
 import React from "react";
 import { APP_VERSION } from "@/config.ts";
 import { gatewayServer } from "@/utils/gateway.ts";
+import { availableUpdate, useVersionStore } from "@/stores/versionStore.ts";
+import { displayVersion } from "@/utils/version.ts";
+import { UpdateIcon } from "./menuIcons.tsx";
 
 interface MenuPopoverItemProps {
   icon: React.ReactNode;
@@ -34,8 +37,20 @@ export const MenuPopoverItem: React.FC<MenuPopoverItemProps> = ({
 
 export const MenuPopoverDivider: React.FC = () => <div className="border-t border-[#333]" />;
 
-export const MenuPopoverVersion: React.FC = () => (
-  <div className="px-4 py-2 text-white/25 text-xs text-center select-none">
-    {gatewayServer ? `${gatewayServer.name} · ${APP_VERSION}` : APP_VERSION}
-  </div>
-);
+export const MenuPopoverVersion: React.FC = () => {
+  const update = useVersionStore(availableUpdate);
+  return (
+    <>
+      {update && (
+        <MenuPopoverItem
+          icon={<UpdateIcon />}
+          label={`Update to ${displayVersion(update)}`}
+          onClick={() => window.location.reload()}
+        />
+      )}
+      <div className="px-4 py-2 text-white/25 text-xs text-center select-none">
+        {gatewayServer ? `${gatewayServer.name} · ${APP_VERSION}` : APP_VERSION}
+      </div>
+    </>
+  );
+};

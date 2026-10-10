@@ -5,7 +5,7 @@ import BackButton from "../buttons/BackButton.tsx";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 
 interface GameMenuModalProps {
-  layout?: "dialog" | "lobby";
+  layout?: "dialog" | "lobby" | "wide";
   title: string;
   subtitle?: string;
   children: React.ReactNode;
@@ -40,7 +40,7 @@ const GameMenuModal: React.FC<GameMenuModalProps> = ({
   footer,
 }) => {
   const [animState, setAnimState] = useState<"entering" | "visible" | "exiting">("entering");
-  const isLobby = layout === "lobby";
+  const layoutClass = layout === "dialog" ? "" : `menu-modal-${layout}`;
 
   useEffect(() => {
     if (visible === false) {
@@ -110,7 +110,7 @@ const GameMenuModal: React.FC<GameMenuModalProps> = ({
       )}
       <div
         data-overlay-layer={showBackdrop || undefined}
-        className={`menu-modal-frame ${isLobby ? "menu-modal-lobby" : ""} ${animationClass}`}
+        className={`menu-modal-frame ${layoutClass} ${animationClass}`}
         style={{ zIndex }}
         onAnimationEnd={handleAnimationEnd}
       >

@@ -116,6 +116,28 @@ build: backend::build frontend::build proxy::build
 [doc('Remove backend, frontend and gateway build output')]
 clean: backend::clean frontend::clean proxy::clean
 
+[group('release')]
+[doc('Check that changelog/<tag>/ has a valid CHANGELOG.md and CHANGELOG-USER.md')]
+changelog-check tag:
+    cd backend && go run ./cmd/changelog check ../changelog {{ tag }}
+
+[group('release')]
+[doc('Tag the current main as <tag> and push it, which starts the release workflow. Needs both changelog files for <tag> on main')]
+release tag:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tag="{{ tag }}"
+    fail() { echo "release: $*" >&2; exit 1; }
+    [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "$tag is not vMAJOR.MINOR.PATCH"
+    [ "$(git branch --show-current)" = "main" ] || fail "releases are tagged from main"
+    [ -z "$(git status --porcelain)" ] || fail "the working tree has uncommitted changes"
+    git fetch --quiet origin main --tags
+    [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || fail "main is not at origin/main; pull or push first"
+    ! git rev-parse --quiet --verify "refs/tags/$tag" >/dev/null || fail "tag $tag already exists"
+    {{ just_executable() }} changelog-check "$tag"
+    git tag -a "$tag" -m "Open Mars $tag"
+    git push origin "$tag"
+
 [group('deploy')]
 [doc('Build and deploy to the Raspberry Pi (see scripts/deploy-pi.sh)')]
 deploy-pi:
