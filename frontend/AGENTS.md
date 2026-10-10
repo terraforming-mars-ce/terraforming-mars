@@ -264,6 +264,10 @@ showNotification({ message: "Name too short", type: "error" });
 showNotification({ message: "Server is down", type: "error", duration: 0 });
 ```
 
+### Updates and changelog
+
+`useVersionCheck` (called in `App.jsx`) compares `APP_VERSION` with the server's `/api/v1/meta` version on load, every 5 minutes, when the tab becomes visible and after WebSocket reconnects. When they differ, `UpdatePill` offers What's new and Update (`location.reload()`, which also works in the installed app because there is no service worker), and `MenuPopoverVersion` shows "Update to vX". `ChangelogModal` shows `GET /api/v1/changelog`, opened from the Changelog menu item or once after the client was updated. State lives in `versionStore`; `localbuild` never counts as out of date.
+
 ### WebSocket Communication
 
 WebSocket service in `services/` handles real-time game state sync.

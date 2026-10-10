@@ -35,6 +35,9 @@ import InstallAppBar from "./components/ui/InstallAppBar.tsx";
 import InstallHowToSheet from "./components/ui/InstallHowToSheet.tsx";
 import ServerDownDialog from "./components/ui/overlay/ServerDownDialog.tsx";
 import ServerSelectorScreen from "./components/ui/servers/ServerSelectorScreen.tsx";
+import UpdatePill from "./components/ui/UpdatePill.tsx";
+import ChangelogModal from "./components/ui/overlay/ChangelogModal.tsx";
+import { useVersionCheck } from "./hooks/useVersionCheck.ts";
 import "./App.css";
 
 function App() {
@@ -118,6 +121,7 @@ function AppWithBackground({ connectionReady }) {
     location.pathname,
   );
   const isCardsPage = location.pathname === "/cards";
+  useVersionCheck(inMenuRoute);
   const { isCompact } = useLayoutMode();
   const ownsMenuChrome = isCompact && (location.pathname === "/join" || isCardsPage);
   const browserOpen = useUIOverlayStore((s) => s.showCardBrowser);
@@ -184,6 +188,8 @@ function AppWithBackground({ connectionReady }) {
       <InstallHowToSheet />
       <ServerDownDialog />
       <ServerSelectorScreen />
+      <UpdatePill inMenuRoute={inMenuRoute} />
+      <ChangelogModal />
       <ConnectionGate ready={connectionReady}>
         <Routes>
           <Route path="/" element={<GameLandingPage />} />

@@ -98,6 +98,9 @@ export const Z_INDEX = {
   DEBUG_OVERLAY: 9999,
   PLAYER_EFFECT_TOAST: 9999,
 
+  // "New version available" pill: above the in-game HUD and its menus, below the compact menu drawer
+  UPDATE_PILL: 33000,
+
   // Compact menu drawer: above every gameplay popover, below app overlays and confirmations
   MOBILE_MENU_DRAWER: 34000,
 
