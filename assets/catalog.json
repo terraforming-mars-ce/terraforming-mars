@@ -3800,6 +3800,25 @@
         "license": "CC0-1.0",
         "maps": "R/G: OpenGL normal X/Y, B: roughness, A: displacement; linear 8-bit, 1K"
       }
+    },
+    {
+      "id": "branding/red-frontier-wordmark",
+      "source": "branding/red-frontier-wordmark.svg",
+      "profile": "copy"
+    },
+    {
+      "id": "branding/red-frontier",
+      "source": "branding/red-frontier.png",
+      "profile": "branding"
+    },
+    {
+      "id": "fonts/open-mars/frontier",
+      "source": "fonts/open-mars/frontier.ttf",
+      "profile": "copy",
+      "font": {
+        "family": "Open Mars Frontier",
+        "weight": 400
+      }
     }
   ]
 }

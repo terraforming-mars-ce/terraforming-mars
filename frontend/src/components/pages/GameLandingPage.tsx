@@ -9,6 +9,7 @@ import { getCorporationLogo } from "../../utils/corporationLogos.tsx";
 import { clearGameSession, getGameSession } from "../../utils/sessionStorage.ts";
 import { Z_INDEX } from "@/constants/zIndex.ts";
 import { useLayoutMode } from "@/hooks/useLayoutMode.ts";
+import OpenMarsLogo from "@/components/ui/OpenMarsLogo.tsx";
 
 const FADE_DURATION_MS = 300;
 
@@ -163,18 +164,18 @@ const GameLandingPage: React.FC = () => {
       style={{ zIndex: Z_INDEX.UI_BASE }}
     >
       <div className="menu-shell relative items-start [@media(max-height:500px)]:flex-row [@media(max-height:500px)]:items-center [@media(max-height:500px)]:justify-between [@media(max-height:500px)]:gap-8">
-        <div className="text-left py-5 max-w-[520px] [@media(max-height:500px)]:py-0 [@media(max-height:500px)]:shrink-0">
-          <h1 className="font-orbitron text-[clamp(2rem,4vw,4.5rem)] text-white mb-10 text-shadow-glow-strong font-bold tracking-wider-2xl text-left leading-tight whitespace-nowrap max-[640px]:text-[min(2rem,8vw)] max-[640px]:tracking-[0.1em] [@media(max-height:500px)]:text-[1.75rem] [@media(max-height:500px)]:tracking-[0.1em] [@media(max-height:500px)]:mb-5">
-            OPEN MARS
+        <div className="text-left py-5 w-[520px] max-w-full compact:w-[340px] [@media(max-height:500px)]:py-0 [@media(max-height:500px)]:shrink-0">
+          <h1 className="mb-10 leading-none compact:mb-5 [@media(max-height:500px)]:mb-5">
+            <OpenMarsLogo surface="menu" />
           </h1>
 
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap justify-center gap-4">
             <GameButton
               as="link"
               to="/create"
               size="lg"
               onClick={handleCreateGame}
-              className="!px-8"
+              className="!px-8 compact:!px-5"
             >
               New game
             </GameButton>
@@ -185,7 +186,7 @@ const GameLandingPage: React.FC = () => {
               emphasis="secondary"
               size="lg"
               onClick={handleJoinGame}
-              className="!px-8"
+              className="!px-8 compact:!px-5"
             >
               Browse games
             </GameButton>

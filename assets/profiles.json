@@ -47,5 +47,12 @@
   },
   "copy": {
     "copy": true
+  },
+  "branding": {
+    "sizes": [
+      768,
+      1536
+    ],
+    "quality": 95
   }
 }
