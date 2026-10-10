@@ -12,8 +12,7 @@ import (
 // multiple times for different players returns the same triggered effects.
 // This is critical for multiplayer: the mapper must not mutate game state.
 func TestToGameDto_TriggeredEffectsNotCleared(t *testing.T) {
-	mockBroadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 3, mockBroadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 3)
 	cardRegistry := testutil.CreateTestCardRegistry()
 
 	players := testGame.GetAllPlayers()

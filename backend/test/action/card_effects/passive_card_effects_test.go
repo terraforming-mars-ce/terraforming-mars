@@ -3,7 +3,6 @@ package card_effects_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	"openmars/internal/action"
 	cardAction "openmars/internal/action/card"
@@ -18,8 +17,7 @@ import (
 // "Effect: When any city tile is placed, gain 2 M€."
 
 func TestRoverConstruction_GainCreditsOnAnyCityPlacement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -75,16 +73,13 @@ func TestRoverConstruction_GainCreditsOnAnyCityPlacement(t *testing.T) {
 		TileType: string(shared.ResourceCityTile),
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	creditsAfter := owner.Resources().Get().Credits
 	testutil.AssertEqual(t, creditsBefore+2, creditsAfter,
 		"Rover Construction owner should gain 2 credits when any player places a city")
 }
 
 func TestRoverConstruction_TriggersOnSelfCityToo(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -134,16 +129,13 @@ func TestRoverConstruction_TriggersOnSelfCityToo(t *testing.T) {
 		TileType: string(shared.ResourceCityTile),
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	creditsAfter := owner.Resources().Get().Credits
 	testutil.AssertEqual(t, creditsBefore+2, creditsAfter,
 		"Rover Construction should also trigger when owner places a city")
 }
 
 func TestRoverConstruction_DoesNotTriggerOnGreenery(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -193,8 +185,6 @@ func TestRoverConstruction_DoesNotTriggerOnGreenery(t *testing.T) {
 		TileType: string(shared.ResourceGreeneryTile),
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	creditsAfter := owner.Resources().Get().Credits
 	testutil.AssertEqual(t, creditsBefore, creditsAfter,
 		"Rover Construction should NOT trigger on greenery placement")
@@ -206,8 +196,7 @@ func TestRoverConstruction_DoesNotTriggerOnGreenery(t *testing.T) {
 //	to this card, or remove a science resource from this card to draw a card."
 
 func TestOlympusConference_AddScienceOnScienceTagPlayed(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -268,16 +257,13 @@ func TestOlympusConference_AddScienceOnScienceTagPlayed(t *testing.T) {
 		Tag:      "science",
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	storageAfter := owner.Resources().GetCardStorage("card-olympus-conference")
 	testutil.AssertEqual(t, storageBefore+1, storageAfter,
 		"Olympus Conference should add 1 science resource when a science tag is played")
 }
 
 func TestOlympusConference_DoesNotTriggerOnNonScienceTag(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -330,8 +316,6 @@ func TestOlympusConference_DoesNotTriggerOnNonScienceTag(t *testing.T) {
 		Tag:      "building",
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	storageAfter := owner.Resources().GetCardStorage("card-olympus-conference")
 	testutil.AssertEqual(t, storageBefore, storageAfter,
 		"Olympus Conference should NOT trigger on non-science tag")
@@ -371,8 +355,7 @@ func olympusConferenceChoiceBehavior() shared.CardBehavior {
 }
 
 func TestOlympusConference_TriggeredChoice_CreatesPendingSelection(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -415,8 +398,6 @@ func TestOlympusConference_TriggeredChoice_CreatesPendingSelection(t *testing.T)
 		Tag:      "science",
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	selection := owner.Selection().GetPendingBehaviorResolutions()[0]
 	testutil.AssertTrue(t, selection != nil, "Should have a pending behavior choice selection")
 	testutil.AssertEqual(t, 2, len(selection.Choices), "Should have 2 choices")
@@ -425,8 +406,7 @@ func TestOlympusConference_TriggeredChoice_CreatesPendingSelection(t *testing.T)
 }
 
 func TestOlympusConference_Choice0_AddScience(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -466,8 +446,6 @@ func TestOlympusConference_Choice0_AddScience(t *testing.T) {
 		Tag:      "science",
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	storageBefore := owner.Resources().GetCardStorage("card-olympus-conference")
 
 	confirmBehaviorChoice := confirmAction.NewConfirmBehaviorChoiceAction(repo, cardRegistry, nil, logger)
@@ -483,8 +461,7 @@ func TestOlympusConference_Choice0_AddScience(t *testing.T) {
 }
 
 func TestOlympusConference_Choice1_RemoveScienceToDrawCard(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -526,8 +503,6 @@ func TestOlympusConference_Choice1_RemoveScienceToDrawCard(t *testing.T) {
 		Tag:      "science",
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	confirmBehaviorChoice := confirmAction.NewConfirmBehaviorChoiceAction(repo, cardRegistry, nil, logger)
 	err := confirmBehaviorChoice.Execute(ctx, testGame.ID(), owner.ID(), owner.Selection().GetPendingBehaviorResolutions()[0].ID, 1, nil)
 	testutil.AssertNoError(t, err, "Choice 1 (remove science, draw card) should succeed")
@@ -545,8 +520,7 @@ func TestOlympusConference_Choice1_RemoveScienceToDrawCard(t *testing.T) {
 }
 
 func TestOlympusConference_Choice1_FailsWithoutScience(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -586,11 +560,9 @@ func TestOlympusConference_Choice1_FailsWithoutScience(t *testing.T) {
 		Tag:      "science",
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	confirmBehaviorChoice := confirmAction.NewConfirmBehaviorChoiceAction(repo, cardRegistry, nil, logger)
 	err := confirmBehaviorChoice.Execute(ctx, testGame.ID(), owner.ID(), owner.Selection().GetPendingBehaviorResolutions()[0].ID, 1, nil)
-	testutil.AssertError(t, err, "Choice 1 should fail with 0 science resources on card")
+	testutil.AssertErrorContains(t, err, "Not enough resources on Olympus Conference", "Choice 1 should fail with 0 science resources on card")
 }
 
 // --- Viral Enhancers (074) ---
@@ -599,8 +571,7 @@ func TestOlympusConference_Choice1_FailsWithoutScience(t *testing.T) {
 //	gain 1 plant or add 1 resource to that card."
 
 func TestViralEnhancers_GainPlantOnPlantTagPlayed(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -666,16 +637,13 @@ func TestViralEnhancers_GainPlantOnPlantTagPlayed(t *testing.T) {
 		CardName: "Plant Test Card",
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	plantsAfter := owner.Resources().Get().Plants
 	testutil.AssertEqual(t, plantsBefore+1, plantsAfter,
 		"Viral Enhancers should give 1 plant when a plant-tagged card is played")
 }
 
 func TestViralEnhancers_DoesNotTriggerOnBuildingTag(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -739,8 +707,6 @@ func TestViralEnhancers_DoesNotTriggerOnBuildingTag(t *testing.T) {
 		CardName: "Building Test Card",
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	plantsAfter := owner.Resources().Get().Plants
 	testutil.AssertEqual(t, plantsBefore, plantsAfter,
 		"Viral Enhancers should NOT trigger on building tag")
@@ -750,8 +716,7 @@ func TestViralEnhancers_DoesNotTriggerOnBuildingTag(t *testing.T) {
 // "Effect: When anyone places an ocean tile, gain 2 plants."
 
 func TestArcticAlgae_GainPlantsOnAnyOceanPlacement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -803,16 +768,13 @@ func TestArcticAlgae_GainPlantsOnAnyOceanPlacement(t *testing.T) {
 		TileType: string(shared.ResourceOceanTile),
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	plantsAfter := owner.Resources().Get().Plants
 	testutil.AssertEqual(t, plantsBefore+2, plantsAfter,
 		"Arctic Algae owner should gain 2 plants when any player places an ocean")
 }
 
 func TestArcticAlgae_TriggersOnSelfOceanToo(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -861,16 +823,13 @@ func TestArcticAlgae_TriggersOnSelfOceanToo(t *testing.T) {
 		TileType: string(shared.ResourceOceanTile),
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	plantsAfter := owner.Resources().Get().Plants
 	testutil.AssertEqual(t, plantsBefore+2, plantsAfter,
 		"Arctic Algae should also trigger when owner places an ocean")
 }
 
 func TestArcticAlgae_DoesNotTriggerOnCityPlacement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -919,8 +878,6 @@ func TestArcticAlgae_DoesNotTriggerOnCityPlacement(t *testing.T) {
 		TileType: string(shared.ResourceCityTile),
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	plantsAfter := owner.Resources().Get().Plants
 	testutil.AssertEqual(t, plantsBefore, plantsAfter,
 		"Arctic Algae should NOT trigger on city placement")
@@ -930,8 +887,7 @@ func TestArcticAlgae_DoesNotTriggerOnCityPlacement(t *testing.T) {
 // "Effect: Add an animal to this card when any city is built."
 
 func TestPets_GainsAnimalWhenOtherPlayerPlacesCity(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -986,16 +942,13 @@ func TestPets_GainsAnimalWhenOtherPlayerPlacesCity(t *testing.T) {
 		TileType: string(shared.ResourceCityTile),
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	animalsAfter := owner.Resources().GetCardStorage("card-pets")
 	testutil.AssertEqual(t, animalsBefore+1, animalsAfter,
 		"Pets should gain 1 animal when any player places a city")
 }
 
 func TestPets_GainsAnimalWhenSelfPlacesCity(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -1048,16 +1001,13 @@ func TestPets_GainsAnimalWhenSelfPlacesCity(t *testing.T) {
 		TileType: string(shared.ResourceCityTile),
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	animalsAfter := owner.Resources().GetCardStorage("card-pets")
 	testutil.AssertEqual(t, animalsBefore+1, animalsAfter,
 		"Pets should gain 1 animal when owner places a city")
 }
 
 func TestPets_DoesNotTriggerOnGreeneryPlacement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -1110,16 +1060,13 @@ func TestPets_DoesNotTriggerOnGreeneryPlacement(t *testing.T) {
 		TileType: string(shared.ResourceGreeneryTile),
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	animalsAfter := owner.Resources().GetCardStorage("card-pets")
 	testutil.AssertEqual(t, animalsBefore, animalsAfter,
 		"Pets should NOT gain animals on greenery placement")
 }
 
 func TestPets_DoesNotTriggerOnOceanPlacement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -1178,8 +1125,7 @@ func TestPets_DoesNotTriggerOnOceanPlacement(t *testing.T) {
 }
 
 func TestPets_AccumulatesAnimalsFromMultipleCities(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -1246,8 +1192,7 @@ func TestPets_AccumulatesAnimalsFromMultipleCities(t *testing.T) {
 }
 
 func TestPets_DoesNotTriggerForWrongGameID(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -1309,8 +1254,7 @@ func TestPets_DoesNotTriggerForWrongGameID(t *testing.T) {
 // These test the full flow: PlayCardAction → passive effect registration → event trigger
 
 func TestPets_EndToEnd_PassiveEffectRegisteredOnPlay(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Pets")
@@ -1351,8 +1295,7 @@ func TestPets_EndToEnd_PassiveEffectRegisteredOnPlay(t *testing.T) {
 }
 
 func TestPets_EndToEnd_MultipleCityPlacements(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Pets")
@@ -1400,8 +1343,7 @@ func TestPets_EndToEnd_MultipleCityPlacements(t *testing.T) {
 }
 
 func TestPets_EndToEnd_DoesNotTriggerOnOcean(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Pets")
@@ -1437,8 +1379,7 @@ func TestPets_EndToEnd_DoesNotTriggerOnOcean(t *testing.T) {
 }
 
 func TestPets_DoesNotGainAnimalsForPreexistingCities(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Pets")

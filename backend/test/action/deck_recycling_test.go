@@ -119,8 +119,7 @@ func TestDeckRecycling_SoldPatents(t *testing.T) {
 }
 
 func TestDeckRecycling_UnselectedStartingCards(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	ctx := context.Background()
 	log := testutil.TestLogger()
@@ -257,7 +256,7 @@ func TestDeckRecycling_AutoShuffleFailsWhenBothPilesEmpty(t *testing.T) {
 
 	// Both draw pile and discard pile are empty — draw should fail
 	_, err = gameDeck.DrawProjectCards(ctx, 1)
-	testutil.AssertError(t, err, "draw from empty deck should fail")
+	testutil.AssertErrorContains(t, err, "not enough cards available", "draw from empty deck should fail")
 }
 
 func TestDeckRecycling_RealDeckNeverDealsPreludeOrCorporation(t *testing.T) {

@@ -89,24 +89,15 @@ func (a *BehaviorApplier) applyMiscOutput(ctx context.Context, o *shared.MiscCon
 		if a.player == nil {
 			return fmt.Errorf("cannot apply bonus tags: no player context")
 		}
-		if o.Per != nil && o.Per.Tag != nil {
-			tagToCount := *o.Per.Tag
-			tagToGrant := shared.CardTag(o.ResourceType)
-			if len(o.Selectors) > 0 && len(o.Selectors[0].Tags) > 0 {
-				tagToGrant = o.Selectors[0].Tags[0]
-			}
-			var tagCount int
-			if a.cardRegistry != nil {
-				tagCount = CountPlayerTags(a.player, a.cardRegistry, []shared.CardTag{tagToCount}, a.tagCountContext())
-			}
-			bonusCount := tagCount * amount
-			if bonusCount > 0 {
-				a.player.AddBonusTags(tagToGrant, bonusCount)
-			}
-			log.Debug("Added bonus tags",
-				slog.String("tag_type", string(tagToGrant)), slog.Int("count", bonusCount),
-				slog.String("per_tag", string(tagToCount)), slog.Int("tag_count", tagCount))
+		// amount is already scaled by Per (e.g. one tag per earth tag the player has).
+		tagToGrant := shared.CardTag(o.ResourceType)
+		if len(o.Selectors) > 0 && len(o.Selectors[0].Tags) > 0 {
+			tagToGrant = o.Selectors[0].Tags[0]
 		}
+		if amount > 0 {
+			a.player.AddBonusTags(tagToGrant, amount)
+		}
+		log.Debug("Added bonus tags", slog.String("tag_type", string(tagToGrant)), slog.Int("count", amount))
 
 	case shared.ResourceFreeTrade:
 		if a.game == nil || a.player == nil {

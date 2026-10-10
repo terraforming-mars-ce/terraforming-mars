@@ -19,8 +19,7 @@ func newSendChatMessageAction(repo game.GameRepository) *connection.SendChatMess
 // ============================================================================
 
 func TestSendChatMessage_PlayerSendsMessage(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	action := newSendChatMessageAction(repo)
@@ -34,8 +33,7 @@ func TestSendChatMessage_PlayerSendsMessage(t *testing.T) {
 }
 
 func TestSendChatMessage_SpectatorSendsMessage(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	spectateAction := newSpectateAction(repo)
@@ -50,8 +48,7 @@ func TestSendChatMessage_SpectatorSendsMessage(t *testing.T) {
 }
 
 func TestSendChatMessage_StoredInGameState(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	action := newSendChatMessageAction(repo)
@@ -68,8 +65,7 @@ func TestSendChatMessage_StoredInGameState(t *testing.T) {
 }
 
 func TestSendChatMessage_TimestampSet(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	action := newSendChatMessageAction(repo)
@@ -87,31 +83,28 @@ func TestSendChatMessage_TimestampSet(t *testing.T) {
 // ============================================================================
 
 func TestSendChatMessage_EmptyMessage(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	action := newSendChatMessageAction(repo)
 	_, err := action.Execute(ctx, g.ID(), "player-a", "Player A", "#ff0000", "", false)
 
-	testutil.AssertError(t, err, "Should reject empty message")
+	testutil.AssertErrorContains(t, err, "message cannot be empty", "Should reject empty message")
 }
 
 func TestSendChatMessage_ExceedsMaxLength(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	longMessage := strings.Repeat("a", shared.MaxChatMessageLength+1)
 	action := newSendChatMessageAction(repo)
 	_, err := action.Execute(ctx, g.ID(), "player-a", "Player A", "#ff0000", longMessage, false)
 
-	testutil.AssertError(t, err, "Should reject message exceeding max length")
+	testutil.AssertErrorContains(t, err, "message exceeds maximum length", "Should reject message exceeding max length")
 }
 
 func TestSendChatMessage_ExactMaxLength(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	exactMessage := strings.Repeat("a", shared.MaxChatMessageLength)
@@ -126,7 +119,7 @@ func TestSendChatMessage_GameNotFound(t *testing.T) {
 	action := newSendChatMessageAction(repo)
 
 	_, err := action.Execute(testutil.TestContext(), "nonexistent", "player-1", "Player", "#ff0000", "Hello", false)
-	testutil.AssertError(t, err, "Should fail for nonexistent game")
+	testutil.AssertErrorContains(t, err, "game not found", "Should fail for nonexistent game")
 }
 
 // ============================================================================
@@ -134,8 +127,7 @@ func TestSendChatMessage_GameNotFound(t *testing.T) {
 // ============================================================================
 
 func TestChatMessage_TrimsOldMessages(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 
 	action := newSendChatMessageAction(repo)

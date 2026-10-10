@@ -13,8 +13,7 @@ import (
 // ============================================================================
 
 func TestKickPlayerAction_HostKicksNonHostInLobby_Success(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 3, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 3)
 	logger := testutil.TestLogger()
 
 	kickAction := connection.NewKickPlayerAction(repo, nil, nil, logger)
@@ -43,8 +42,7 @@ func TestKickPlayerAction_HostKicksNonHostInLobby_Success(t *testing.T) {
 }
 
 func TestKickPlayerAction_NonHostCannotKick_Error(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 3, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 3)
 	logger := testutil.TestLogger()
 
 	kickAction := connection.NewKickPlayerAction(repo, nil, nil, logger)
@@ -65,15 +63,14 @@ func TestKickPlayerAction_NonHostCannotKick_Error(t *testing.T) {
 
 	err := kickAction.Execute(context.Background(), testGame.ID(), nonHostRequester, nonHostTarget)
 
-	testutil.AssertError(t, err, "Non-host should not be able to kick players")
+	testutil.AssertErrorContains(t, err, "only host can kick players", "Non-host should not be able to kick players")
 
 	fetchedGame, _ := repo.Get(context.Background(), testGame.ID())
 	testutil.AssertEqual(t, 3, len(fetchedGame.GetAllPlayers()), "No player should be removed")
 }
 
 func TestKickPlayerAction_HostCannotKickSelf_Error(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 
 	kickAction := connection.NewKickPlayerAction(repo, nil, nil, logger)
@@ -82,15 +79,14 @@ func TestKickPlayerAction_HostCannotKickSelf_Error(t *testing.T) {
 
 	err := kickAction.Execute(context.Background(), testGame.ID(), hostPlayerID, hostPlayerID)
 
-	testutil.AssertError(t, err, "Host should not be able to kick themselves")
+	testutil.AssertErrorContains(t, err, "cannot kick yourself", "Host should not be able to kick themselves")
 
 	fetchedGame, _ := repo.Get(context.Background(), testGame.ID())
 	testutil.AssertEqual(t, 2, len(fetchedGame.GetAllPlayers()), "No player should be removed")
 }
 
 func TestKickPlayerAction_ActiveGameKick_MarksAsExited(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 
 	testutil.StartTestGame(t, testGame)
@@ -128,12 +124,11 @@ func TestKickPlayerAction_GameNotFound_Error(t *testing.T) {
 
 	err := kickAction.Execute(context.Background(), "non-existent-game", "host-id", "target-id")
 
-	testutil.AssertError(t, err, "Should fail when game doesn't exist")
+	testutil.AssertErrorContains(t, err, "game not found", "Should fail when game doesn't exist")
 }
 
 func TestKickPlayerAction_PlayerNotFound_Error(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 
 	kickAction := connection.NewKickPlayerAction(repo, nil, nil, logger)
@@ -142,15 +137,14 @@ func TestKickPlayerAction_PlayerNotFound_Error(t *testing.T) {
 
 	err := kickAction.Execute(context.Background(), testGame.ID(), hostPlayerID, "non-existent-player")
 
-	testutil.AssertError(t, err, "Should fail when target player doesn't exist")
+	testutil.AssertErrorContains(t, err, "player non-existent-player not found", "Should fail when target player doesn't exist")
 
 	fetchedGame, _ := repo.Get(context.Background(), testGame.ID())
 	testutil.AssertEqual(t, 2, len(fetchedGame.GetAllPlayers()), "No player should be removed")
 }
 
 func TestKickPlayerAction_KickLeavesHostAlone_Success(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 
 	kickAction := connection.NewKickPlayerAction(repo, nil, nil, logger)
@@ -181,8 +175,7 @@ func TestKickPlayerAction_KickLeavesHostAlone_Success(t *testing.T) {
 // ============================================================================
 
 func TestPlayerDisconnectedAction_LobbyRegularPlayerLeaves_Removed(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 3, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 3)
 	logger := testutil.TestLogger()
 
 	disconnectAction := connection.NewPlayerDisconnectedAction(repo, logger)
@@ -213,8 +206,7 @@ func TestPlayerDisconnectedAction_LobbyRegularPlayerLeaves_Removed(t *testing.T)
 }
 
 func TestPlayerDisconnectedAction_LobbyHostLeaves_HostReassigned(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 3, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 3)
 	logger := testutil.TestLogger()
 
 	disconnectAction := connection.NewPlayerDisconnectedAction(repo, logger)
@@ -243,8 +235,7 @@ func TestPlayerDisconnectedAction_LobbyHostLeaves_HostReassigned(t *testing.T) {
 }
 
 func TestPlayerDisconnectedAction_LobbyHostLeavesAsLastPlayer_GameDeleted(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 
 	disconnectAction := connection.NewPlayerDisconnectedAction(repo, logger)
@@ -257,12 +248,11 @@ func TestPlayerDisconnectedAction_LobbyHostLeavesAsLastPlayer_GameDeleted(t *tes
 	testutil.AssertNoError(t, err, "Last player leaving should succeed")
 
 	_, err = repo.Get(context.Background(), gameID)
-	testutil.AssertError(t, err, "Game should be deleted after last player leaves")
+	testutil.AssertErrorContains(t, err, "not found", "Game should be deleted after last player leaves")
 }
 
 func TestPlayerDisconnectedAction_LobbyLastNonHostLeaves_HostAlone(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 
 	disconnectAction := connection.NewPlayerDisconnectedAction(repo, logger)
@@ -289,8 +279,7 @@ func TestPlayerDisconnectedAction_LobbyLastNonHostLeaves_HostAlone(t *testing.T)
 }
 
 func TestPlayerDisconnectedAction_ActiveGamePlayerDisconnects_MarkedDisconnected(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 
 	testutil.StartTestGame(t, testGame)
@@ -320,8 +309,7 @@ func TestPlayerDisconnectedAction_ActiveGamePlayerDisconnects_MarkedDisconnected
 }
 
 func TestPlayerDisconnectedAction_ActiveGameHostDisconnects_NoReassignment(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 
 	testutil.StartTestGame(t, testGame)
@@ -351,27 +339,25 @@ func TestPlayerDisconnectedAction_GameNotFound_Error(t *testing.T) {
 
 	err := disconnectAction.Execute(context.Background(), "non-existent-game", "player-id")
 
-	testutil.AssertError(t, err, "Should fail when game doesn't exist")
+	testutil.AssertErrorContains(t, err, "game not found", "Should fail when game doesn't exist")
 }
 
 func TestPlayerDisconnectedAction_PlayerNotFoundInLobby_Error(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 
 	disconnectAction := connection.NewPlayerDisconnectedAction(repo, logger)
 
 	err := disconnectAction.Execute(context.Background(), testGame.ID(), "non-existent-player")
 
-	testutil.AssertError(t, err, "Should fail when player doesn't exist in lobby")
+	testutil.AssertErrorContains(t, err, "player non-existent-player not found", "Should fail when player doesn't exist in lobby")
 
 	fetchedGame, _ := repo.Get(context.Background(), testGame.ID())
 	testutil.AssertEqual(t, 2, len(fetchedGame.GetAllPlayers()), "No player should be removed")
 }
 
 func TestPlayerDisconnectedAction_PlayerNotFoundInActiveGame_Error(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 
 	testutil.StartTestGame(t, testGame)
@@ -380,15 +366,14 @@ func TestPlayerDisconnectedAction_PlayerNotFoundInActiveGame_Error(t *testing.T)
 
 	err := disconnectAction.Execute(context.Background(), testGame.ID(), "non-existent-player")
 
-	testutil.AssertError(t, err, "Should fail when player doesn't exist in active game")
+	testutil.AssertErrorContains(t, err, "player not found", "Should fail when player doesn't exist in active game")
 
 	fetchedGame, _ := repo.Get(context.Background(), testGame.ID())
 	testutil.AssertEqual(t, 2, len(fetchedGame.GetAllPlayers()), "No player should be affected")
 }
 
 func TestPlayerDisconnectedAction_MultiplePlayersLeavingSequence_Lobby(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 4, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 4)
 	logger := testutil.TestLogger()
 
 	disconnectAction := connection.NewPlayerDisconnectedAction(repo, logger)
@@ -428,5 +413,5 @@ func TestPlayerDisconnectedAction_MultiplePlayersLeavingSequence_Lobby(t *testin
 	testutil.AssertNoError(t, err, "Last player leaving should succeed")
 
 	_, err = repo.Get(context.Background(), testGame.ID())
-	testutil.AssertError(t, err, "Game should be deleted")
+	testutil.AssertErrorContains(t, err, "not found", "Game should be deleted")
 }

@@ -17,8 +17,7 @@ func newEndGameAction(repo game.GameRepository) *connection.EndGameAction {
 // ============================================================================
 
 func TestEndGame_HostCanEndLobbyGame(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 	action := newEndGameAction(repo)
 
@@ -64,7 +63,7 @@ func TestEndGame_NonHostCannotEndGame(t *testing.T) {
 	}
 
 	err := action.Execute(ctx, g.ID(), nonHostID)
-	testutil.AssertError(t, err, "Non-host should not be able to end game")
+	testutil.AssertErrorContains(t, err, "only the host can end the game", "Non-host should not be able to end game")
 
 	testutil.AssertTrue(t, repo.Exists(ctx, g.ID()), "Game should still exist")
 }
@@ -75,5 +74,5 @@ func TestEndGame_InvalidGameID(t *testing.T) {
 	action := newEndGameAction(repo)
 
 	err := action.Execute(ctx, "nonexistent-game", "some-player")
-	testutil.AssertError(t, err, "Should fail for nonexistent game")
+	testutil.AssertErrorContains(t, err, "game not found", "Should fail for nonexistent game")
 }

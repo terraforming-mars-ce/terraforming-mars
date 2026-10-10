@@ -21,7 +21,7 @@ func TestRegistry_GetByID_NotFound(t *testing.T) {
 	registry := pfLoader.NewInMemoryProjectFundingRegistry(defs)
 
 	_, err := registry.GetByID("nonexistent_id")
-	testutil.AssertError(t, err, "Should fail for unknown ID")
+	testutil.AssertErrorContains(t, err, "project not found", "Should fail for unknown ID")
 }
 
 func TestRegistry_GetAll(t *testing.T) {

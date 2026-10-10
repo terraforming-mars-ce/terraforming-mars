@@ -4,7 +4,6 @@ import (
 	"context"
 	"slices"
 	"testing"
-	"time"
 
 	"openmars/internal/action/admin"
 	cardAction "openmars/internal/action/card"
@@ -118,8 +117,6 @@ func TestPointLuna_DrawCardWhenPlayingEarthTag(t *testing.T) {
 		ResourceCredit, 6)
 	err = playCard.Execute(ctx, testGame.ID(), playerID, sponsorsID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Playing Sponsors should succeed")
-
-	time.Sleep(50 * time.Millisecond)
 
 	handAfter := len(p.Hand().Cards())
 	testutil.AssertEqual(t, handBefore, handAfter, "Point Luna replaces the played Earth card with exactly one draw")
@@ -272,7 +269,7 @@ func TestVitor_OnlyOffersAwardsInThisGame(t *testing.T) {
 	}
 
 	confirm := confirmAction.NewConfirmAwardFundAction(repo, cardRegistry, awardRegistry, logger)
-	testutil.AssertError(t, confirm.Execute(ctx, testGame.ID(), playerID, notInGame), "award outside this game is rejected")
+	testutil.AssertErrorContains(t, confirm.Execute(ctx, testGame.ID(), playerID, notInGame), "award scientist is not available for selection", "award outside this game is rejected")
 	testutil.AssertFalse(t, testGame.Awards().IsFunded(shared.AwardType(notInGame)), "nothing funded")
 }
 
@@ -305,8 +302,6 @@ func TestVitor_Gain3MCWhenPlayingCardWithVP(t *testing.T) {
 		ResourceCredit, 8)
 	err = playCard.Execute(ctx, testGame.ID(), playerID, vpCardID, payment, nil, nil, nil, nil, nil)
 	testutil.AssertNoError(t, err, "Playing Colonizer Training Camp should succeed")
-
-	time.Sleep(50 * time.Millisecond)
 
 	creditsAfter := p.Resources().Get().Credits
 	testutil.AssertEqual(t, creditsBefore-8+3, creditsAfter, "Vitor should grant 3 MC when playing a card with VP")
@@ -371,7 +366,7 @@ func TestValleyTrust_FirstActionWaitsForChosenPreludePlacement(t *testing.T) {
 	testutil.AssertNoError(t, err, "place greenery")
 	testutil.AssertTrue(t, g.GetForcedFirstAction(id) == nil, "all first-action effects complete")
 	testutil.AssertEqual(t, 1, g.CurrentTurn().ActionsRemaining(), "one normal action remains")
-	testutil.AssertError(t, confirm.Execute(ctx, g.ID(), id, []string{"P12"}, nil, shared.Payment{}), "cannot confirm again")
+	testutil.AssertErrorContains(t, confirm.Execute(ctx, g.ID(), id, []string{"P12"}, nil, shared.Payment{}), "no pending card draw selection", "cannot confirm again")
 	testutil.AssertEqual(t, 1, g.CurrentTurn().ActionsRemaining(), "no duplicate consumption")
 	testutil.AssertEqual(t, 0, len(p.Selection().CardReceipts()), "selection does not create a redundant receipt")
 }

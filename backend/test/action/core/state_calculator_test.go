@@ -11,16 +11,10 @@ import (
 	"openmars/internal/game/datastore"
 	"openmars/internal/game/player"
 	"openmars/internal/game/shared"
-	"openmars/internal/logger"
 	"openmars/test/testutil"
 )
 
 func setupTestEnvironment(t *testing.T) (*game.Game, *player.Player, gamecards.CardRegistry) {
-	// Initialize logger
-	logLevel := "error"
-	if err := logger.Init(&logLevel); err != nil {
-		t.Fatalf("Failed to initialize logger: %v", err)
-	}
 
 	// Create test game with default settings
 	settings := shared.GameSettings{

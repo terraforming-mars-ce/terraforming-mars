@@ -54,7 +54,7 @@ func TestGiveCard_InvalidGame(t *testing.T) {
 
 	action := admin.NewGiveCardAction(repo, cardRegistry, logger)
 	err := action.Execute(ctx, "nonexistent-game", "some-player", testutil.CardID("Asteroid Mining"))
-	testutil.AssertError(t, err, "GiveCard should fail for invalid game")
+	testutil.AssertErrorContains(t, err, "game not found", "GiveCard should fail for invalid game")
 }
 
 func TestGiveCard_InvalidPlayer(t *testing.T) {
@@ -64,7 +64,7 @@ func TestGiveCard_InvalidPlayer(t *testing.T) {
 
 	action := admin.NewGiveCardAction(repo, cardRegistry, logger)
 	err := action.Execute(ctx, testGame.ID(), "nonexistent-player", testutil.CardID("Asteroid Mining"))
-	testutil.AssertError(t, err, "GiveCard should fail for invalid player")
+	testutil.AssertErrorContains(t, err, "player not found", "GiveCard should fail for invalid player")
 }
 
 // --- SetResources ---
@@ -139,7 +139,7 @@ func TestSetResources_InvalidGame(t *testing.T) {
 
 	action := admin.NewSetResourcesAction(repo, logger)
 	err := action.Execute(ctx, "nonexistent-game", "some-player", shared.Resources{Credits: 10})
-	testutil.AssertError(t, err, "SetResources should fail for invalid game")
+	testutil.AssertErrorContains(t, err, "game not found", "SetResources should fail for invalid game")
 }
 
 func TestSetResources_InvalidPlayer(t *testing.T) {
@@ -149,7 +149,7 @@ func TestSetResources_InvalidPlayer(t *testing.T) {
 
 	action := admin.NewSetResourcesAction(repo, logger)
 	err := action.Execute(ctx, testGame.ID(), "nonexistent-player", shared.Resources{Credits: 10})
-	testutil.AssertError(t, err, "SetResources should fail for invalid player")
+	testutil.AssertErrorContains(t, err, "player not found", "SetResources should fail for invalid player")
 }
 
 // --- SetProduction ---
@@ -203,7 +203,7 @@ func TestSetProduction_InvalidGame(t *testing.T) {
 
 	action := admin.NewSetProductionAction(repo, logger)
 	err := action.Execute(ctx, "nonexistent-game", "some-player", shared.Production{})
-	testutil.AssertError(t, err, "SetProduction should fail for invalid game")
+	testutil.AssertErrorContains(t, err, "game not found", "SetProduction should fail for invalid game")
 }
 
 func TestSetProduction_InvalidPlayer(t *testing.T) {
@@ -213,7 +213,7 @@ func TestSetProduction_InvalidPlayer(t *testing.T) {
 
 	action := admin.NewSetProductionAction(repo, logger)
 	err := action.Execute(ctx, testGame.ID(), "nonexistent-player", shared.Production{})
-	testutil.AssertError(t, err, "SetProduction should fail for invalid player")
+	testutil.AssertErrorContains(t, err, "player not found", "SetProduction should fail for invalid player")
 }
 
 // --- SetTR ---
@@ -264,7 +264,7 @@ func TestSetTR_InvalidGame(t *testing.T) {
 
 	action := admin.NewSetTRAction(repo, logger)
 	err := action.Execute(ctx, "nonexistent-game", "some-player", 30)
-	testutil.AssertError(t, err, "SetTR should fail for invalid game")
+	testutil.AssertErrorContains(t, err, "game not found", "SetTR should fail for invalid game")
 }
 
 func TestSetTR_InvalidPlayer(t *testing.T) {
@@ -274,7 +274,7 @@ func TestSetTR_InvalidPlayer(t *testing.T) {
 
 	action := admin.NewSetTRAction(repo, logger)
 	err := action.Execute(ctx, testGame.ID(), "nonexistent-player", 30)
-	testutil.AssertError(t, err, "SetTR should fail for invalid player")
+	testutil.AssertErrorContains(t, err, "player not found", "SetTR should fail for invalid player")
 }
 
 // --- SetGlobalParameters ---
@@ -330,7 +330,7 @@ func TestSetGlobalParameters_InvalidGame(t *testing.T) {
 
 	action := admin.NewSetGlobalParametersAction(repo, logger)
 	err := action.Execute(ctx, "nonexistent-game", admin.SetGlobalParametersRequest{})
-	testutil.AssertError(t, err, "SetGlobalParameters should fail for invalid game")
+	testutil.AssertErrorContains(t, err, "game not found", "SetGlobalParameters should fail for invalid game")
 }
 
 // --- SetPhase ---
@@ -370,7 +370,7 @@ func TestSetPhase_InvalidGame(t *testing.T) {
 
 	action := admin.NewSetPhaseAction(repo, logger)
 	err := action.Execute(ctx, "nonexistent-game", shared.GamePhaseAction)
-	testutil.AssertError(t, err, "SetPhase should fail for invalid game")
+	testutil.AssertErrorContains(t, err, "game not found", "SetPhase should fail for invalid game")
 }
 
 // --- SetCurrentTurn ---
@@ -413,7 +413,7 @@ func TestSetCurrentTurn_InvalidGame(t *testing.T) {
 
 	action := admin.NewSetCurrentTurnAction(repo, logger)
 	err := action.Execute(ctx, "nonexistent-game", "some-player")
-	testutil.AssertError(t, err, "SetCurrentTurn should fail for invalid game")
+	testutil.AssertErrorContains(t, err, "game not found", "SetCurrentTurn should fail for invalid game")
 }
 
 func TestSetCurrentTurn_InvalidPlayer(t *testing.T) {
@@ -423,7 +423,7 @@ func TestSetCurrentTurn_InvalidPlayer(t *testing.T) {
 
 	action := admin.NewSetCurrentTurnAction(repo, logger)
 	err := action.Execute(ctx, testGame.ID(), "nonexistent-player")
-	testutil.AssertError(t, err, "SetCurrentTurn should fail for invalid player")
+	testutil.AssertErrorContains(t, err, "player not found", "SetCurrentTurn should fail for invalid player")
 }
 
 // --- SetCorporation ---
@@ -468,7 +468,7 @@ func TestSetCorporation_InvalidGame(t *testing.T) {
 
 	action := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := action.Execute(ctx, "nonexistent-game", "some-player", testutil.CardID("CrediCor"))
-	testutil.AssertError(t, err, "SetCorporation should fail for invalid game")
+	testutil.AssertErrorContains(t, err, "game not found", "SetCorporation should fail for invalid game")
 }
 
 func TestSetCorporation_InvalidPlayer(t *testing.T) {
@@ -478,7 +478,7 @@ func TestSetCorporation_InvalidPlayer(t *testing.T) {
 
 	action := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := action.Execute(ctx, testGame.ID(), "nonexistent-player", testutil.CardID("CrediCor"))
-	testutil.AssertError(t, err, "SetCorporation should fail for invalid player")
+	testutil.AssertErrorContains(t, err, "player not found", "SetCorporation should fail for invalid player")
 }
 
 func TestSetCorporation_InvalidCardID(t *testing.T) {
@@ -488,7 +488,7 @@ func TestSetCorporation_InvalidCardID(t *testing.T) {
 
 	action := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "nonexistent-card-id")
-	testutil.AssertError(t, err, "SetCorporation should fail for invalid card ID")
+	testutil.AssertErrorContains(t, err, "corporation card not found", "SetCorporation should fail for invalid card ID")
 }
 
 func TestSetCorporation_RegistersVPGranter(t *testing.T) {
@@ -554,9 +554,12 @@ func TestSetCorporation_NonCorporationCard(t *testing.T) {
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
+	p, _ := testGame.GetPlayer(playerID)
+	corpBefore := p.CorporationID()
 	action := admin.NewSetCorporationAction(repo, cardRegistry, nil, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, testutil.CardID("Asteroid Mining"))
-	testutil.AssertError(t, err, "SetCorporation should fail for non-corporation card")
+	testutil.AssertErrorContains(t, err, "is not a corporation card", "SetCorporation should fail for non-corporation card")
+	testutil.AssertEqual(t, corpBefore, p.CorporationID(), "corporation unchanged")
 }
 
 // --- StartTileSelection ---
@@ -607,7 +610,7 @@ func TestStartTileSelection_InvalidTileType(t *testing.T) {
 
 	action := admin.NewStartTileSelectionAction(repo, logger)
 	err := action.Execute(ctx, testGame.ID(), playerID, "invalid-tile-type")
-	testutil.AssertError(t, err, "StartTileSelection should fail for invalid tile type")
+	testutil.AssertErrorContains(t, err, "invalid tile type", "StartTileSelection should fail for invalid tile type")
 }
 
 func TestStartTileSelection_InvalidGame(t *testing.T) {
@@ -617,7 +620,7 @@ func TestStartTileSelection_InvalidGame(t *testing.T) {
 
 	action := admin.NewStartTileSelectionAction(repo, logger)
 	err := action.Execute(ctx, "nonexistent-game", "some-player", board.TileTypeCity)
-	testutil.AssertError(t, err, "StartTileSelection should fail for invalid game")
+	testutil.AssertErrorContains(t, err, "game not found", "StartTileSelection should fail for invalid game")
 }
 
 func TestStartTileSelection_InvalidPlayer(t *testing.T) {
@@ -627,7 +630,7 @@ func TestStartTileSelection_InvalidPlayer(t *testing.T) {
 
 	action := admin.NewStartTileSelectionAction(repo, logger)
 	err := action.Execute(ctx, testGame.ID(), "nonexistent-player", board.TileTypeCity)
-	testutil.AssertError(t, err, "StartTileSelection should fail for invalid player")
+	testutil.AssertErrorContains(t, err, "player not found", "StartTileSelection should fail for invalid player")
 }
 
 // --- Combined admin operations ---

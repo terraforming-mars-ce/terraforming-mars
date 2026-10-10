@@ -35,29 +35,20 @@ func (h *AddBotHandler) HandleMessage(ctx context.Context, connection *core.Conn
 
 	log.Debug("Processing add bot request")
 
-	playerID, gameID := connection.GetPlayer()
+	playerID, gameID := connection.PlayerID(), connection.GameID()
 	if gameID == "" || playerID == "" {
-		h.sendError(connection, "Not connected to a game")
+		connection.SendError(message.Type, "Not connected to a game")
 		return
 	}
 
 	result, err := h.addBotAction.Execute(ctx, gameID, playerID)
 	if err != nil {
 		log.Warn("Failed to add bot", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
 	log.Debug("Bot added", slog.String("bot_id", result.PlayerID))
 
 	h.broadcaster.BroadcastGameState(gameID, nil)
-}
-
-func (h *AddBotHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	}
 }

@@ -43,7 +43,7 @@ func TestCardDescriptionValidationRejectsInvalidSections(t *testing.T) {
 func TestCardDescriptionRejectsStringFormat(t *testing.T) {
 	var card cards.Card
 	err := json.Unmarshal([]byte(`{"id":"x","name":"X","type":"automated","description":"**Effect:** Old format."}`), &card)
-	testutil.AssertError(t, err, "string description should fail to unmarshal")
+	testutil.AssertErrorContains(t, err, "cannot unmarshal string", "string description should fail to unmarshal")
 }
 
 func TestCardDescriptionRoundTripsThroughDto(t *testing.T) {

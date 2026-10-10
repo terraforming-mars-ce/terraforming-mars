@@ -3,7 +3,6 @@ package action_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	"openmars/test/testutil"
 )
@@ -18,7 +17,6 @@ func TestTemperatureBonus_HeatProductionAtMinus24(t *testing.T) {
 	testutil.AssertNoError(t, testGame.GlobalParameters().SetTemperature(ctx, -26), "set temperature")
 	_, err := testGame.GlobalParameters().IncreaseTemperature(ctx, 1, playerID)
 	testutil.AssertNoError(t, err, "increase temperature")
-	time.Sleep(50 * time.Millisecond)
 
 	finalHeatProd := player.Resources().Production().Heat
 	testutil.AssertEqual(t, initialHeatProd+1, finalHeatProd,
@@ -35,7 +33,6 @@ func TestTemperatureBonus_HeatProductionAtMinus20(t *testing.T) {
 	testutil.AssertNoError(t, testGame.GlobalParameters().SetTemperature(ctx, -22), "set temperature")
 	_, err := testGame.GlobalParameters().IncreaseTemperature(ctx, 1, playerID)
 	testutil.AssertNoError(t, err, "increase temperature")
-	time.Sleep(50 * time.Millisecond)
 
 	finalHeatProd := player.Resources().Production().Heat
 	testutil.AssertEqual(t, initialHeatProd+1, finalHeatProd,
@@ -52,7 +49,6 @@ func TestTemperatureBonus_CrossBothThresholds(t *testing.T) {
 	testutil.AssertNoError(t, testGame.GlobalParameters().SetTemperature(ctx, -26), "set temperature")
 	_, err := testGame.GlobalParameters().IncreaseTemperature(ctx, 3, playerID)
 	testutil.AssertNoError(t, err, "increase temperature")
-	time.Sleep(50 * time.Millisecond)
 
 	finalHeatProd := player.Resources().Production().Heat
 	testutil.AssertEqual(t, initialHeatProd+2, finalHeatProd,
@@ -66,7 +62,6 @@ func TestTemperatureBonus_OceanQueuedAtZero(t *testing.T) {
 	testutil.AssertNoError(t, testGame.GlobalParameters().SetTemperature(ctx, -2), "set temperature")
 	_, err := testGame.GlobalParameters().IncreaseTemperature(ctx, 1, playerID)
 	testutil.AssertNoError(t, err, "increase temperature")
-	time.Sleep(50 * time.Millisecond)
 
 	// The queue auto-processes the first tile into the active pending tile selection
 	selection := testGame.GetPendingTileSelection(playerID)
@@ -88,7 +83,6 @@ func TestOxygenBonus_TemperatureStepAt8(t *testing.T) {
 
 	_, err := testGame.GlobalParameters().IncreaseOxygen(ctx, 1, playerID)
 	testutil.AssertNoError(t, err, "increase oxygen")
-	time.Sleep(50 * time.Millisecond)
 
 	finalTemp := testGame.GlobalParameters().Temperature()
 	testutil.AssertEqual(t, initialTemp+2, finalTemp,
@@ -112,7 +106,6 @@ func TestOxygenBonus_ChainedWithTemperatureBonus(t *testing.T) {
 
 	_, err := testGame.GlobalParameters().IncreaseOxygen(ctx, 1, playerID)
 	testutil.AssertNoError(t, err, "increase oxygen")
-	time.Sleep(50 * time.Millisecond)
 
 	finalTemp := testGame.GlobalParameters().Temperature()
 	testutil.AssertEqual(t, -24, finalTemp,
@@ -137,7 +130,6 @@ func TestVenusBonus_CardDrawAt8(t *testing.T) {
 	testutil.AssertNoError(t, testGame.GlobalParameters().SetVenus(ctx, 6), "set venus")
 	_, err := testGame.GlobalParameters().IncreaseVenus(ctx, 1, playerID)
 	testutil.AssertNoError(t, err, "increase venus")
-	time.Sleep(50 * time.Millisecond)
 
 	finalCardCount := player.Hand().CardCount()
 	testutil.AssertEqual(t, initialCardCount+1, finalCardCount,
@@ -154,7 +146,6 @@ func TestVenusBonus_TRAt16(t *testing.T) {
 	testutil.AssertNoError(t, testGame.GlobalParameters().SetVenus(ctx, 14), "set venus")
 	_, err := testGame.GlobalParameters().IncreaseVenus(ctx, 1, playerID)
 	testutil.AssertNoError(t, err, "increase venus")
-	time.Sleep(50 * time.Millisecond)
 
 	finalTR := player.Resources().TerraformRating()
 	testutil.AssertEqual(t, initialTR+1, finalTR,
@@ -170,7 +161,6 @@ func TestAdminSetDoesNotTriggerBonus(t *testing.T) {
 
 	testutil.AssertNoError(t, testGame.GlobalParameters().SetTemperature(ctx, -26), "set temperature to -26")
 	testutil.AssertNoError(t, testGame.GlobalParameters().SetTemperature(ctx, -20), "set temperature to -20")
-	time.Sleep(50 * time.Millisecond)
 
 	finalHeatProd := player.Resources().Production().Heat
 	testutil.AssertEqual(t, initialHeatProd, finalHeatProd,

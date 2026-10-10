@@ -5,7 +5,6 @@ import (
 	"fmt"
 	baseaction "openmars/internal/action"
 	"openmars/internal/delivery/dto"
-	"time"
 
 	"openmars/internal/action/admin"
 	cardAction "openmars/internal/action/card"
@@ -45,8 +44,7 @@ func nitriteReducingBacteriaBehavior() shared.CardBehavior {
 // No behaviors, just VP and a max oxygen requirement.
 // Test that the card can be played when oxygen is low enough.
 func TestColonizerTrainingCamp_PlaysSuccessfully(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Colonizer Training Camp")
@@ -72,8 +70,7 @@ func TestColonizerTrainingCamp_PlaysSuccessfully(t *testing.T) {
 // --- Pets (172) ---
 // "Effect: Add an animal to this card when any city is built. Add 1 animal to this card. 1 VP per 2 animals here."
 func TestPets_PlaysSuccessfully(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Pets")
@@ -100,8 +97,7 @@ func TestPets_PlaysSuccessfully(t *testing.T) {
 // --- Deep Well Heating (003) ---
 // "Increase your energy production 1 step. Increase temperature 1 step."
 func TestDeepWellHeating_EnergyProductionAndTemperature(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Deep Well Heating")
@@ -133,8 +129,7 @@ func TestDeepWellHeating_EnergyProductionAndTemperature(t *testing.T) {
 // --- Cloud Seeding (004) ---
 // "Decrease your M€ production 1 step and any heat production 1 step. Increase your plant production 2 steps."
 func TestCloudSeeding_ProductionChanges(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Cloud Seeding")
@@ -180,8 +175,7 @@ func TestCloudSeeding_ProductionChanges(t *testing.T) {
 // --- Capital (008) ---
 // "Decrease your energy production 2 steps and increase your M€ production 5 steps. Place a city tile."
 func TestCapital_ProductionAndCityPlacement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Capital")
@@ -217,8 +211,7 @@ func TestCapital_ProductionAndCityPlacement(t *testing.T) {
 // --- Big Asteroid (011) ---
 // "Raise temperature 2 steps and gain 4 titanium. Remove up to 4 plants from any player."
 func TestBigAsteroid_TempTitaniumAndRemovePlants(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Big Asteroid")
@@ -257,8 +250,7 @@ func TestBigAsteroid_TempTitaniumAndRemovePlants(t *testing.T) {
 // Auto behavior: "Increase your titanium production 1 step."
 // Action behavior: "Spend 1 steel to gain 5 M€."
 func TestSpaceElevator_TitaniumProductionOnPlay(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Space Elevator")
@@ -362,8 +354,7 @@ func TestEquatorialMagnetizer_DecreaseEnergyProdIncreaseTR(t *testing.T) {
 // --- Domed Crater (016) ---
 // "Gain 3 plants and place a city tile. Decrease your energy production 1 step and increase M€ production 3 steps."
 func TestDomedCrater_PlantsProductionAndCityPlacement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Domed Crater")
@@ -401,8 +392,7 @@ func TestDomedCrater_PlantsProductionAndCityPlacement(t *testing.T) {
 // --- Noctis City (017) ---
 // "Decrease your energy production 1 step and increase your M€ production 3 steps. Place a city tile on the reserved area."
 func TestNoctisCity_ProductionAndReservedCityPlacement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Noctis City")
@@ -435,8 +425,7 @@ func TestNoctisCity_ProductionAndReservedCityPlacement(t *testing.T) {
 // --- Methane From Titan (018) ---
 // "Increase your heat production 2 steps and your plant production 2 steps."
 func TestMethaneFromTitan_HeatAndPlantProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Methane From Titan")
@@ -467,8 +456,7 @@ func TestMethaneFromTitan_HeatAndPlantProduction(t *testing.T) {
 // --- Phobos Space Haven (021) ---
 // "Increase your titanium production 1 step and place a city tile on the reserved area."
 func TestPhobosSpaceHaven_TitaniumProdAndCityPlacement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Phobos Space Haven")
@@ -496,8 +484,7 @@ func TestPhobosSpaceHaven_TitaniumProdAndCityPlacement(t *testing.T) {
 // --- Black Polar Dust (022) ---
 // "Place an ocean tile. Decrease your M€ production 2 steps and increase your heat production 3 steps."
 func TestBlackPolarDust_ProductionAndOceanPlacement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Black Polar Dust")
@@ -531,8 +518,7 @@ func TestBlackPolarDust_ProductionAndOceanPlacement(t *testing.T) {
 // Auto: "Gain 1 plant."
 // Passive: "When anyone places an ocean tile, gain 2 plants."
 func TestArcticAlgae_GainPlantOnPlay(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Arctic Algae")
@@ -559,8 +545,7 @@ func TestArcticAlgae_GainPlantOnPlay(t *testing.T) {
 // --- Eos Chasma National Park (026) ---
 // "Add 1 animal to any animal card. Gain 3 plants. Increase your M€ production 2 steps."
 func TestEosChasmaNationalPark_PlantsAndProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Eos Chasma National Park")
@@ -606,8 +591,7 @@ func TestEosChasmaNationalPark_PlantsAndProduction(t *testing.T) {
 // --- Cupola City (029) ---
 // "Place a city tile. Decrease your energy production 1 step and increase your M€ production 3 steps."
 func TestCupolaCity_ProductionAndCityPlacement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Cupola City")
@@ -642,8 +626,7 @@ func TestCupolaCity_ProductionAndCityPlacement(t *testing.T) {
 // --- Lunar Beam (030) ---
 // "Decrease your M€ production 2 steps and increase your heat production and energy production 2 steps each."
 func TestLunarBeam_ProductionChanges(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Lunar Beam")
@@ -678,8 +661,7 @@ func TestLunarBeam_ProductionChanges(t *testing.T) {
 // --- Underground City (032) ---
 // "Place a city tile. Decrease your energy production 2 steps and increase your steel production 2 steps."
 func TestUndergroundCity_ProductionAndCityPlacement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Underground City")
@@ -714,8 +696,7 @@ func TestUndergroundCity_ProductionAndCityPlacement(t *testing.T) {
 // --- Release Of Inert Gases (036) ---
 // "Raise your terraform rating 2 steps."
 func TestReleaseOfInertGases_RaiseTR(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Release Of Inert Gases")
@@ -742,8 +723,7 @@ func TestReleaseOfInertGases_RaiseTR(t *testing.T) {
 // --- Deimos Down (039) ---
 // "Raise temperature 3 steps and gain 4 steel. Remove up to 8 plants from any player."
 func TestDeimosDown_TempSteelAndRemovePlants(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Deimos Down")
@@ -785,8 +765,7 @@ func TestDeimosDown_TempSteelAndRemovePlants(t *testing.T) {
 // --- Asteroid Mining (040) ---
 // "Increase your titanium production 2 steps."
 func TestAsteroidMining_TitaniumProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Asteroid Mining")
@@ -814,8 +793,7 @@ func TestAsteroidMining_TitaniumProduction(t *testing.T) {
 // --- Food Factory (041) ---
 // "Decrease your plant production 1 step and increase your M€ production 4 steps."
 func TestFoodFactory_ProductionChanges(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Food Factory")
@@ -848,8 +826,7 @@ func TestFoodFactory_ProductionChanges(t *testing.T) {
 // --- Archaebacteria (042) ---
 // "Increase your plant production 1 step."
 func TestArchaebacteria_PlantProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Archaebacteria")
@@ -877,8 +854,7 @@ func TestArchaebacteria_PlantProduction(t *testing.T) {
 // --- Carbonate Processing (043) ---
 // "Decrease your energy production 1 step and increase your heat production 3 steps."
 func TestCarbonateProcessing_ProductionChanges(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Carbonate Processing")
@@ -911,8 +887,7 @@ func TestCarbonateProcessing_ProductionChanges(t *testing.T) {
 // --- Nuclear Power (045) ---
 // "Decrease your M€ production 2 steps and increase your energy production 3 steps."
 func TestNuclearPower_ProductionChanges(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Nuclear Power")
@@ -945,8 +920,7 @@ func TestNuclearPower_ProductionChanges(t *testing.T) {
 // --- Lightning Harvest (046) ---
 // "Increase your energy production and your M€ production 1 step each."
 func TestLightningHarvest_ProductionChanges(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Lightning Harvest")
@@ -983,8 +957,7 @@ func TestLightningHarvest_ProductionChanges(t *testing.T) {
 // --- Algae (047) ---
 // "Gain 1 plant and increase your plant production 2 steps."
 func TestAlgae_PlantAndPlantProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Algae")
@@ -1016,8 +989,7 @@ func TestAlgae_PlantAndPlantProduction(t *testing.T) {
 // --- Adapted Lichen (048) ---
 // "Increase your plant production 1 step."
 func TestAdaptedLichen_PlantProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Adapted Lichen")
@@ -1105,8 +1077,7 @@ func TestTardigrades_AccumulateMicrobes(t *testing.T) {
 // Auto: "Decrease any plant production 1 step."
 // Action: "Add 1 animal to this card."
 func TestFish_DecreasePlantProductionOnPlay(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Fish")
@@ -1169,8 +1140,7 @@ func TestFish_ActionAddAnimal(t *testing.T) {
 // --- Comet (010) ---
 // "Raise temperature 1 step and place an ocean tile. Remove up to 3 plants from any player."
 func TestComet_TempOceanAndRemovePlants(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Comet")
@@ -1207,8 +1177,7 @@ func TestComet_TempOceanAndRemovePlants(t *testing.T) {
 // "Raise temperature 1 step and gain 2 titanium. Remove up to 3 plants from any player."
 // (Testing the self-player titanium gain specifically)
 func TestAsteroid_SelfPlayerGainTitanium(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Asteroid")
@@ -1238,8 +1207,7 @@ func TestAsteroid_SelfPlayerGainTitanium(t *testing.T) {
 // --- Interstellar Colony Ship (027) ---
 // No behaviors - just 4 VP. Requires 5 science tags.
 func TestInterstellarColonyShip_RequiresScienteTags(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Interstellar Colony Ship")
@@ -1271,7 +1239,7 @@ func TestInterstellarColonyShip_RequiresScienteTags(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := shared.NativePayment(shared.ResourceCredit, 24)
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Should fail without 5 science tags")
+	testutil.AssertErrorContains(t, err, "tag requirements need 5 additional tags", "Should fail without 5 science tags")
 	// Add 5 science-tagged played cards
 	for i := 0; i < 5; i++ {
 		sciID := "card-science-" + string(rune('a'+i))
@@ -1288,8 +1256,7 @@ func TestInterstellarColonyShip_RequiresScienteTags(t *testing.T) {
 // --- Comet (010) Solo Mode ---
 // Verify that in solo mode, the any-player plant removal is skipped.
 func TestComet_SoloMode_PlantRemovalSkipped(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Comet")
@@ -1317,8 +1284,7 @@ func TestComet_SoloMode_PlantRemovalSkipped(t *testing.T) {
 // --- Deimos Down (039) Solo Mode ---
 // In solo mode, plant removal from any-player is skipped but steel gain and temperature work.
 func TestDeimosDown_SoloMode_SteelAndTemp(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Deimos Down")
@@ -1351,8 +1317,7 @@ func TestDeimosDown_SoloMode_SteelAndTemp(t *testing.T) {
 // --- Methane From Titan (018) - with oxygen requirement ---
 // This card requires 2% oxygen. Test that it fails when oxygen is too low.
 func TestMethaneFromTitan_FailsWithoutOxygenRequirement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Methane From Titan")
@@ -1371,14 +1336,14 @@ func TestMethaneFromTitan_FailsWithoutOxygenRequirement(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := shared.NativePayment(shared.ResourceCredit, 28)
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Methane From Titan should fail at 0% oxygen (requires 2%)")
+	testutil.AssertErrorContains(t, err, "oxygen requirement not met", "Methane From Titan should fail at 0% oxygen (requires 2%)")
+	testutil.AssertTrue(t, p.Hand().HasCard(card.ID), "rejected card stays in hand")
 }
 
 // --- Food Factory (041) - fails without plant production ---
 // "Decrease your plant production 1 step" - should fail if player has 0 plant production.
 func TestFoodFactory_FailsWithoutPlantProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Food Factory")
@@ -1397,14 +1362,14 @@ func TestFoodFactory_FailsWithoutPlantProduction(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := shared.NativePayment(shared.ResourceCredit, 12)
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Food Factory should fail without plant production")
+	testutil.AssertErrorContains(t, err, "insufficient plant-production", "Food Factory should fail without plant production")
+	testutil.AssertTrue(t, p.Hand().HasCard(card.ID), "rejected card stays in hand")
 }
 
 // --- Nuclear Power (045) - fails without enough credit production ---
 // "Decrease your M€ production 2 steps" - should fail if player has < 2 credit production (below -5 floor).
 func TestNuclearPower_FailsWithInsufficientCreditProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Nuclear Power")
@@ -1426,15 +1391,15 @@ func TestNuclearPower_FailsWithInsufficientCreditProduction(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := shared.NativePayment(shared.ResourceCredit, 10)
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err,
+	testutil.AssertErrorContains(t, err, "insufficient credit-production",
 		"Nuclear Power should fail when credit production would go below -5")
+	testutil.AssertTrue(t, p.Hand().HasCard(card.ID), "rejected card stays in hand")
 }
 
 // --- Carbonate Processing (043) - fails without energy production ---
 // "Decrease your energy production 1 step" - should fail if player has 0 energy production.
 func TestCarbonateProcessing_FailsWithoutEnergyProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Carbonate Processing")
@@ -1453,14 +1418,14 @@ func TestCarbonateProcessing_FailsWithoutEnergyProduction(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := shared.NativePayment(shared.ResourceCredit, 6)
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Carbonate Processing should fail without energy production")
+	testutil.AssertErrorContains(t, err, "insufficient energy-production", "Carbonate Processing should fail without energy production")
+	testutil.AssertTrue(t, p.Hand().HasCard(card.ID), "rejected card stays in hand")
 }
 
 // --- Colonizer Training Camp (001) - max oxygen requirement failure ---
 // Should fail when oxygen is above 5%.
 func TestColonizerTrainingCamp_FailsAboveMaxOxygen(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Colonizer Training Camp")
@@ -1484,7 +1449,8 @@ func TestColonizerTrainingCamp_FailsAboveMaxOxygen(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := shared.NativePayment(shared.ResourceCredit, 8)
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Colonizer Training Camp should fail when oxygen is above 5%")
+	testutil.AssertErrorContains(t, err, "oxygen requirement not met", "Colonizer Training Camp should fail when oxygen is above 5%")
+	testutil.AssertTrue(t, p.Hand().HasCard(card.ID), "rejected card stays in hand")
 }
 
 // tagP returns a pointer to a CardTag (unique name to avoid redefinition conflicts).
@@ -1492,8 +1458,7 @@ func TestColonizerTrainingCamp_FailsAboveMaxOxygen(t *testing.T) {
 // --- Lake Marineris (053) ---
 // "Place 2 ocean tiles. Requires 0°C or warmer."
 func TestLakeMarineris_PlacesTwoOceanTiles(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	lakeMarineris := testutil.GetCardByName("Lake Marineris")
@@ -1519,8 +1484,7 @@ func TestLakeMarineris_PlacesTwoOceanTiles(t *testing.T) {
 	testutil.AssertEqual(t, "ocean", selection.TileType, "Pending tile type should be ocean")
 }
 func TestLakeMarineris_FailsWithoutTemperatureRequirement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	lakeMarineris := testutil.GetCardByName("Lake Marineris")
@@ -1539,7 +1503,8 @@ func TestLakeMarineris_FailsWithoutTemperatureRequirement(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := shared.NativePayment(shared.ResourceCredit, 18)
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), lakeMarineris.ID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Lake Marineris should fail without meeting temperature requirement")
+	testutil.AssertErrorContains(t, err, "temperature requirement not met", "Lake Marineris should fail without meeting temperature requirement")
+	testutil.AssertTrue(t, p.Hand().HasCard(lakeMarineris.ID), "rejected card stays in hand")
 }
 
 // --- Small Animals (054) ---
@@ -1575,8 +1540,7 @@ func TestSmallAnimals_AddAnimalAction(t *testing.T) {
 // --- Kelp Farming (055) ---
 // "Increase your M€ production 2 steps and your plant production 3 steps. Gain 2 plants. Requires 6 oceans."
 func TestKelpFarming_ProductionAndPlantGain(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	kelpFarming := testutil.GetCardByName("Kelp Farming")
@@ -1608,8 +1572,7 @@ func TestKelpFarming_ProductionAndPlantGain(t *testing.T) {
 // --- Mine (056) ---
 // "Increase your steel production 1 step."
 func TestMine_SteelProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	mine := testutil.GetCardByName("Mine")
@@ -1636,8 +1599,7 @@ func TestMine_SteelProduction(t *testing.T) {
 // --- Vesta Shipyard (057) ---
 // "Increase your titanium production 1 step."
 func TestVestaShipyard_TitaniumProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	vestaShipyard := testutil.GetCardByName("Vesta Shipyard")
@@ -1664,8 +1626,7 @@ func TestVestaShipyard_TitaniumProduction(t *testing.T) {
 // --- Beam From A Thorium Asteroid (058) ---
 // "Increase your heat production and energy production 3 steps each. Requires jovian tag."
 func TestBeamFromAThoriumAsteroid_HeatAndEnergyProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	beamFromAsteroid := testutil.GetCardByName("Beam From A Thorium Asteroid")
@@ -1696,8 +1657,7 @@ func TestBeamFromAThoriumAsteroid_HeatAndEnergyProduction(t *testing.T) {
 // --- Trees (060) ---
 // "Requires -4°C or warmer. Increase your plant production 3 steps. Gain 1 plant."
 func TestTrees_PlantProductionAndGain(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	trees := testutil.GetCardByName("Trees")
@@ -1725,8 +1685,7 @@ func TestTrees_PlantProductionAndGain(t *testing.T) {
 	testutil.AssertEqual(t, productionBefore.Plants+3, productionAfter.Plants, "Should gain 3 plant production")
 }
 func TestTrees_FailsWithoutTemperatureRequirement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	trees := testutil.GetCardByName("Trees")
@@ -1745,14 +1704,14 @@ func TestTrees_FailsWithoutTemperatureRequirement(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := shared.NativePayment(shared.ResourceCredit, 13)
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), trees.ID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Trees should fail without meeting temperature requirement")
+	testutil.AssertErrorContains(t, err, "temperature requirement not met", "Trees should fail without meeting temperature requirement")
+	testutil.AssertTrue(t, p.Hand().HasCard(trees.ID), "rejected card stays in hand")
 }
 
 // --- Mineral Deposit (062) ---
 // "Gain 5 steel."
 func TestMineralDeposit_GainSteel(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	mineralDeposit := testutil.GetCardByName("Mineral Deposit")
@@ -1779,8 +1738,7 @@ func TestMineralDeposit_GainSteel(t *testing.T) {
 // --- Mining Expedition (063) ---
 // "Raise oxygen 1 step. Remove 2 plants from any player. Gain 2 steel."
 func TestMiningExpedition_OxygenAndSteelAndRemovePlants(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	miningExpedition := testutil.GetCardByName("Mining Expedition")
@@ -1818,8 +1776,7 @@ func TestMiningExpedition_OxygenAndSteelAndRemovePlants(t *testing.T) {
 // --- Building Industries (065) ---
 // "Decrease your energy production 1 step and increase your steel production 2 steps."
 func TestBuildingIndustries_EnergyToSteelProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	buildingIndustries := testutil.GetCardByName("Building Industries")
@@ -1850,8 +1807,7 @@ func TestBuildingIndustries_EnergyToSteelProduction(t *testing.T) {
 // --- Sponsors (068) ---
 // "Increase your M€ production 2 steps."
 func TestSponsors_CreditProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	sponsors := testutil.GetCardByName("Sponsors")
@@ -1878,8 +1834,7 @@ func TestSponsors_CreditProduction(t *testing.T) {
 // --- Towing A Comet (075) ---
 // "Gain 2 plants. Raise oxygen level 1 step and place an ocean tile."
 func TestTowingAComet_PlantsOxygenOcean(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	towingAComet := testutil.GetCardByName("Towing A Comet")
@@ -1949,8 +1904,7 @@ func TestSpaceMirrors_SpendCreditsForEnergyProduction(t *testing.T) {
 // --- Solar Wind Power (077) ---
 // "Increase your energy production 1 step and gain 2 titanium."
 func TestSolarWindPower_EnergyProductionAndTitanium(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	solarWindPower := testutil.GetCardByName("Solar Wind Power")
@@ -1980,8 +1934,7 @@ func TestSolarWindPower_EnergyProductionAndTitanium(t *testing.T) {
 // --- Ice Asteroid (078) ---
 // "Place 2 ocean tiles."
 func TestIceAsteroid_PlaceTwoOceanTiles(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	iceAsteroid := testutil.GetCardByName("Ice Asteroid")
@@ -2008,8 +1961,7 @@ func TestIceAsteroid_PlaceTwoOceanTiles(t *testing.T) {
 // --- Callisto Penal Mines (082) ---
 // "Increase your M€ production 3 steps."
 func TestCallistoPenalMines_CreditProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	callistoPenalMines := testutil.GetCardByName("Callisto Penal Mines")
@@ -2036,8 +1988,7 @@ func TestCallistoPenalMines_CreditProduction(t *testing.T) {
 // --- Giant Space Mirror (083) ---
 // "Increase your energy production 3 steps."
 func TestGiantSpaceMirror_EnergyProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	giantSpaceMirror := testutil.GetCardByName("Giant Space Mirror")
@@ -2064,8 +2015,7 @@ func TestGiantSpaceMirror_EnergyProduction(t *testing.T) {
 // --- Grass (087) ---
 // "Requires -16°C or warmer. Increase your plant production 1 step. Gain 3 plants."
 func TestGrass_PlantProductionAndGain(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	grass := testutil.GetCardByName("Grass")
@@ -2096,8 +2046,7 @@ func TestGrass_PlantProductionAndGain(t *testing.T) {
 // --- Heather (088) ---
 // "Requires -14°C or warmer. Increase your plant production 1 step. Gain 1 plant."
 func TestHeather_PlantProductionAndGain(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	heather := testutil.GetCardByName("Heather")
@@ -2125,8 +2074,7 @@ func TestHeather_PlantProductionAndGain(t *testing.T) {
 	testutil.AssertEqual(t, productionBefore.Plants+1, productionAfter.Plants, "Should gain 1 plant production")
 }
 func TestHeather_FailsWithoutTemperature(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	heather := testutil.GetCardByName("Heather")
@@ -2145,14 +2093,14 @@ func TestHeather_FailsWithoutTemperature(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := shared.NativePayment(shared.ResourceCredit, 6)
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), heather.ID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Heather should fail without meeting temperature requirement")
+	testutil.AssertErrorContains(t, err, "temperature requirement not met", "Heather should fail without meeting temperature requirement")
+	testutil.AssertTrue(t, p.Hand().HasCard(heather.ID), "rejected card stays in hand")
 }
 
 // --- Peroxide Power (089) ---
 // "Decrease your M€ production 1 step and increase your energy production 2 steps."
 func TestPeroxidePower_ProductionChange(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	peroxidePower := testutil.GetCardByName("Peroxide Power")
@@ -2183,8 +2131,7 @@ func TestPeroxidePower_ProductionChange(t *testing.T) {
 // --- Research (090) ---
 // "Counts as playing 2 science cards. Draw 2 cards."
 func TestResearch_DrawTwoCards(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	research := testutil.GetCardByName("Research")
@@ -2212,8 +2159,7 @@ func TestResearch_DrawTwoCards(t *testing.T) {
 // --- Gene Repair (091) ---
 // "Requires 3 science tags. Increase your M€ production 2 steps."
 func TestGeneRepair_CreditProductionWithScienceTags(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	geneRepair := testutil.GetCardByName("Gene Repair")
@@ -2244,8 +2190,7 @@ func TestGeneRepair_CreditProductionWithScienceTags(t *testing.T) {
 	testutil.AssertEqual(t, productionBefore.Credits+2, productionAfter.Credits, "Should gain 2 credit production")
 }
 func TestGeneRepair_FailsWithoutScienceTags(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	geneRepair := testutil.GetCardByName("Gene Repair")
@@ -2264,14 +2209,14 @@ func TestGeneRepair_FailsWithoutScienceTags(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := shared.NativePayment(shared.ResourceCredit, 12)
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), geneRepair.ID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Gene Repair should fail without 3 science tags")
+	testutil.AssertErrorContains(t, err, "tag requirements need 3 additional tags", "Gene Repair should fail without 3 science tags")
+	testutil.AssertTrue(t, p.Hand().HasCard(geneRepair.ID), "rejected card stays in hand")
 }
 
 // --- Io Mining Industries (092) ---
 // "Increase your titanium production 2 steps and your M€ production 2 steps."
 func TestIoMiningIndustries_TitaniumAndCreditProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	ioMining := testutil.GetCardByName("Io Mining Industries")
@@ -2299,8 +2244,7 @@ func TestIoMiningIndustries_TitaniumAndCreditProduction(t *testing.T) {
 // --- Bushes (093) ---
 // "Requires -10°C or warmer. Increase your plant production 2 steps. Gain 2 plants."
 func TestBushes_PlantProductionAndGain(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	bushes := testutil.GetCardByName("Bushes")
@@ -2331,8 +2275,7 @@ func TestBushes_PlantProductionAndGain(t *testing.T) {
 // --- Tropical Resort (098) ---
 // "Decrease your heat production 2 steps and increase your M€ production 3 steps."
 func TestTropicalResort_ProductionChange(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	tropicalResort := testutil.GetCardByName("Tropical Resort")
@@ -2363,8 +2306,7 @@ func TestTropicalResort_ProductionChange(t *testing.T) {
 // --- Toll Station (099) ---
 // "Increase your M€ production 1 step for each space tag your opponents have."
 func TestTollStation_CreditProductionPerOpponentSpaceTag(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	tollStation := testutil.GetCardByName("Toll Station")
@@ -2405,8 +2347,7 @@ func TestTollStation_CreditProductionPerOpponentSpaceTag(t *testing.T) {
 // --- Fueled Generators (100) ---
 // "Decrease your M€ production 1 step and increase your energy production 1 step."
 func TestFueledGenerators_ProductionChange(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	fueledGenerators := testutil.GetCardByName("Fueled Generators")
@@ -2504,16 +2445,17 @@ func TestIronworks_FailsWithoutEnoughEnergy(t *testing.T) {
 			Behavior:      behavior,
 		},
 	})
+	before := p.Resources().Get()
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Ironworks should fail without enough energy")
+	testutil.AssertErrorContains(t, err, "payment exceeds available source pool", "Ironworks should fail without enough energy")
+	testutil.AssertEqual(t, before, p.Resources().Get(), "rejected action spends nothing")
 }
 
 // --- Power Grid (102) ---
 // "Increase your energy production 1 step for each power tag you have, including this."
 func TestPowerGrid_EnergyProductionPerPowerTag(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	powerGrid := testutil.GetCardByName("Power Grid")
@@ -2544,8 +2486,7 @@ func TestPowerGrid_EnergyProductionPerPowerTag(t *testing.T) {
 		"Should gain 3 energy production (1 per each of 2 existing + 1 self power tag)")
 }
 func TestPowerGrid_NoPreviousPowerTags(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	powerGrid := testutil.GetCardByName("Power Grid")
@@ -2684,16 +2625,17 @@ func TestOreProcessor_FailsWithoutEnoughEnergy(t *testing.T) {
 			Behavior:      behavior,
 		},
 	})
+	before := p.Resources().Get()
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Ore Processor should fail without enough energy")
+	testutil.AssertErrorContains(t, err, "payment exceeds available source pool", "Ore Processor should fail without enough energy")
+	testutil.AssertEqual(t, before, p.Resources().Get(), "rejected action spends nothing")
 }
 
 // --- Mass Converter (094) ---
 // "Requires 5 science tags. Increase your energy production 6 steps."
 func TestMassConverter_EnergyProductionWithScienceRequirement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	massConverter := testutil.GetCardByName("Mass Converter")
@@ -2729,8 +2671,7 @@ func TestMassConverter_EnergyProductionWithScienceRequirement(t *testing.T) {
 	testutil.AssertEqual(t, productionBefore.Energy+6, productionAfter.Energy, "Should gain 6 energy production")
 }
 func TestMassConverter_FailsWithoutScienceTags(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	massConverter := testutil.GetCardByName("Mass Converter")
@@ -2749,14 +2690,14 @@ func TestMassConverter_FailsWithoutScienceTags(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := shared.NativePayment(shared.ResourceCredit, 8)
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), massConverter.ID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Mass Converter should fail without 5 science tags")
+	testutil.AssertErrorContains(t, err, "tag requirements need 5 additional tags", "Mass Converter should fail without 5 science tags")
+	testutil.AssertTrue(t, p.Hand().HasCard(massConverter.ID), "rejected card stays in hand")
 }
 
 // --- Quantum Extractor (079) ---
 // "Requires 4 science tags. Increase your energy production 4 steps."
 func TestQuantumExtractor_EnergyProductionWithScienceRequirement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	quantumExtractor := testutil.GetCardByName("Quantum Extractor")
@@ -2793,8 +2734,7 @@ func TestQuantumExtractor_EnergyProductionWithScienceRequirement(t *testing.T) {
 // --- Giant Ice Asteroid (080) ---
 // "Raise temperature 2 steps and place 2 ocean tiles. Remove up to 6 plants from any player."
 func TestGiantIceAsteroid_TemperatureAndOceans(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	giantIceAsteroid := testutil.GetCardByName("Giant Ice Asteroid")
@@ -2829,8 +2769,7 @@ func TestGiantIceAsteroid_TemperatureAndOceans(t *testing.T) {
 // --- Trans-Neptune Probe (084) ---
 // No behaviors -- just tags (science, space). Tests that a card with no behaviors can be played.
 func TestTransNeptuneProbe_PlaysWithNoBehaviors(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	transNeptuneProbe := testutil.GetCardByName("Trans-Neptune Probe")
@@ -2857,8 +2796,7 @@ func TestTransNeptuneProbe_PlaysWithNoBehaviors(t *testing.T) {
 // "Increase your M€ production 3 steps."
 // =============================================================================
 func TestAcquiredCompany_CreditProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Acquired Company")
@@ -2888,8 +2826,7 @@ func TestAcquiredCompany_CreditProduction(t *testing.T) {
 // "Gain 1 M€ for each event ever played by all players."
 // =============================================================================
 func TestMediaArchives_GainCreditsPerEventTag(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Media Archives")
@@ -2929,8 +2866,7 @@ func TestMediaArchives_GainCreditsPerEventTag(t *testing.T) {
 // Requires 12% oxygen.
 // =============================================================================
 func TestOpenCity_PlantsProductionAndCity(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Open City")
@@ -2966,8 +2902,7 @@ func TestOpenCity_PlantsProductionAndCity(t *testing.T) {
 	testutil.AssertTrue(t, selection != nil, "Should have pending city tile selection")
 }
 func TestOpenCity_FailsBelowOxygenRequirement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Open City")
@@ -2988,7 +2923,8 @@ func TestOpenCity_FailsBelowOxygenRequirement(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := shared.NativePayment(shared.ResourceCredit, 23)
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Open City should fail when oxygen is below 12%")
+	testutil.AssertErrorContains(t, err, "oxygen requirement not met", "Open City should fail when oxygen is below 12%")
+	testutil.AssertTrue(t, p.Hand().HasCard(card.ID), "rejected card stays in hand")
 }
 
 // =============================================================================
@@ -2996,8 +2932,7 @@ func TestOpenCity_FailsBelowOxygenRequirement(t *testing.T) {
 // "Effect: After you play an event card, you gain 3 M€."
 // =============================================================================
 func TestMediaGroup_Gain3Credits(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Media Group")
@@ -3034,8 +2969,7 @@ func TestMediaGroup_Gain3Credits(t *testing.T) {
 // Action: "Look at the top card and buy or discard it."
 // =============================================================================
 func TestBusinessNetwork_DecreaseCreditProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Business Network")
@@ -3068,8 +3002,7 @@ func TestBusinessNetwork_DecreaseCreditProduction(t *testing.T) {
 // "Gain 2 TR."
 // =============================================================================
 func TestBribedCommittee_Gain2TR(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Bribed Committee")
@@ -3098,8 +3031,7 @@ func TestBribedCommittee_Gain2TR(t *testing.T) {
 // "Increase your energy production 1 step."
 // =============================================================================
 func TestSolarPower_EnergyProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Solar Power")
@@ -3129,8 +3061,7 @@ func TestSolarPower_EnergyProduction(t *testing.T) {
 // No behaviors, just VP. Requires 7% oxygen.
 // =============================================================================
 func TestBreathingFilters_PlaysWithOxygenRequirement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Breathing Filters")
@@ -3154,8 +3085,7 @@ func TestBreathingFilters_PlaysWithOxygenRequirement(t *testing.T) {
 		"Breathing Filters should be in played cards")
 }
 func TestBreathingFilters_FailsBelowOxygen(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Breathing Filters")
@@ -3173,7 +3103,8 @@ func TestBreathingFilters_FailsBelowOxygen(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := shared.NativePayment(shared.ResourceCredit, 11)
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Breathing Filters should fail with oxygen below 7%")
+	testutil.AssertErrorContains(t, err, "oxygen requirement not met", "Breathing Filters should fail with oxygen below 7%")
+	testutil.AssertTrue(t, p.Hand().HasCard(card.ID), "rejected card stays in hand")
 }
 
 // =============================================================================
@@ -3181,8 +3112,7 @@ func TestBreathingFilters_FailsBelowOxygen(t *testing.T) {
 // "Increase your energy production 2 steps."
 // =============================================================================
 func TestGeothermalPower_EnergyProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Geothermal Power")
@@ -3213,8 +3143,7 @@ func TestGeothermalPower_EnergyProduction(t *testing.T) {
 // Requires 4 C or warmer.
 // =============================================================================
 func TestFarming_PlantsAndProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Farming")
@@ -3250,8 +3179,7 @@ func TestFarming_PlantsAndProduction(t *testing.T) {
 // No behaviors, just VP. Requires 3 oceans or less.
 // =============================================================================
 func TestDustSeals_PlaysWithMaxOceanRequirement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Dust Seals")
@@ -3279,8 +3207,7 @@ func TestDustSeals_PlaysWithMaxOceanRequirement(t *testing.T) {
 // "Lose 1 plant. Increase plant production 1 step." Requires 3 oceans.
 // =============================================================================
 func TestMoss_LosePlantGainPlantProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Moss")
@@ -3323,8 +3250,7 @@ func TestMoss_LosePlantGainPlantProduction(t *testing.T) {
 //
 // =============================================================================
 func TestHackers_ProductionChanges(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Hackers")
@@ -3369,8 +3295,7 @@ func TestHackers_ProductionChanges(t *testing.T) {
 // "Decrease your energy production 1 step and increase your heat production 4 steps."
 // =============================================================================
 func TestGHGFactories_ProductionChanges(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("GHG Factories")
@@ -3405,8 +3330,7 @@ func TestGHGFactories_ProductionChanges(t *testing.T) {
 // "Place an ocean tile."
 // =============================================================================
 func TestSubterraneanReservoir_PlaceOcean(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Subterranean Reservoir")
@@ -3435,8 +3359,7 @@ func TestSubterraneanReservoir_PlaceOcean(t *testing.T) {
 // Requires 5% oxygen.
 // =============================================================================
 func TestZeppelins_CreditProductionPerCityOnMars(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Zeppelins")
@@ -3468,8 +3391,7 @@ func TestZeppelins_CreditProductionPerCityOnMars(t *testing.T) {
 // add a microbe to this card." Requires 3% oxygen.
 // =============================================================================
 func TestDecomposers_AddMicrobeOnPlay(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Decomposers")
@@ -3505,8 +3427,7 @@ func TestDecomposers_AddMicrobeOnPlay(t *testing.T) {
 // "Increase your energy production 3 steps." Requires 2 power tags.
 // =============================================================================
 func TestFusionPower_EnergyProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Fusion Power")
@@ -3536,8 +3457,7 @@ func TestFusionPower_EnergyProduction(t *testing.T) {
 		"Energy production should increase by 3")
 }
 func TestFusionPower_FailsWithInsufficientPowerTags(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Fusion Power")
@@ -3555,7 +3475,8 @@ func TestFusionPower_FailsWithInsufficientPowerTags(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := shared.NativePayment(shared.ResourceCredit, 14)
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Fusion Power should fail without 2 power tags")
+	testutil.AssertErrorContains(t, err, "tag requirements need 2 additional tags", "Fusion Power should fail without 2 power tags")
+	testutil.AssertTrue(t, p.Hand().HasCard(card.ID), "rejected card stays in hand")
 }
 
 // =============================================================================
@@ -3601,8 +3522,7 @@ func TestSymbioticFungus_ActionAddMicrobeToAnyCard(t *testing.T) {
 // No behaviors, just VP. Requires 1 plant, 1 microbe, 1 animal tag.
 // =============================================================================
 func TestAdvancedEcosystems_PlaysWithTagRequirements(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Advanced Ecosystems")
@@ -3637,8 +3557,7 @@ func TestAdvancedEcosystems_PlaysWithTagRequirements(t *testing.T) {
 // "Increase your energy production 2 steps." Requires 4 oceans.
 // =============================================================================
 func TestGreatDam_EnergyProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Great Dam")
@@ -3669,8 +3588,7 @@ func TestGreatDam_EnergyProduction(t *testing.T) {
 // "Increase your M€ production 1 step for each Earth tag you have, including this."
 // =============================================================================
 func TestCartel_CreditProductionPerEarthTag(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Cartel")
@@ -3708,8 +3626,7 @@ func TestCartel_CreditProductionPerEarthTag(t *testing.T) {
 //
 // =============================================================================
 func TestStripMine_ProductionAndOxygen(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Strip Mine")
@@ -3750,8 +3667,7 @@ func TestStripMine_ProductionAndOxygen(t *testing.T) {
 // "Increase your energy production 1 step." Requires 3 oceans.
 // =============================================================================
 func TestWavePower_EnergyProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Wave Power")
@@ -3782,8 +3698,7 @@ func TestWavePower_EnergyProduction(t *testing.T) {
 // "Raise temperature 2 steps."
 // =============================================================================
 func TestLavaFlows_RaiseTemperature(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Lava Flows")
@@ -3813,8 +3728,7 @@ func TestLavaFlows_RaiseTemperature(t *testing.T) {
 // "Increase your energy production 1 step."
 // =============================================================================
 func TestPowerPlant_EnergyProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Power Plant")
@@ -3844,8 +3758,7 @@ func TestPowerPlant_EnergyProduction(t *testing.T) {
 // "Place an ocean tile. Draw 2 cards."
 // =============================================================================
 func TestLargeConvoy_OceanAndCardDraw(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Large Convoy")
@@ -3875,8 +3788,7 @@ func TestLargeConvoy_OceanAndCardDraw(t *testing.T) {
 // "Increase your titanium production 1 step."
 // =============================================================================
 func TestTitaniumMine_TitaniumProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Titanium Mine")
@@ -3906,8 +3818,7 @@ func TestTitaniumMine_TitaniumProduction(t *testing.T) {
 // "Increase your energy production 3 steps." Requires 2 science tags.
 // =============================================================================
 func TestTectonicStressPower_EnergyProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Tectonic Stress Power")
@@ -3942,8 +3853,7 @@ func TestTectonicStressPower_EnergyProduction(t *testing.T) {
 // "Lose 2 plants. Increase your plant production 2 steps." Requires 3 oceans.
 // =============================================================================
 func TestNitrophilicMoss_LosePlantsGainPlantProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Nitrophilic Moss")
@@ -3979,8 +3889,7 @@ func TestNitrophilicMoss_LosePlantsGainPlantProduction(t *testing.T) {
 // Requires 8% oxygen.
 // =============================================================================
 func TestHerbivores_AddAnimalAndDecreaseTargetPlantProd(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Herbivores")
@@ -4020,8 +3929,7 @@ func TestHerbivores_AddAnimalAndDecreaseTargetPlantProd(t *testing.T) {
 // Requires 6% oxygen.
 // =============================================================================
 func TestInsects_PlantProductionPerPlantTag(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Insects")
@@ -4059,8 +3967,7 @@ func TestInsects_PlantProductionPerPlantTag(t *testing.T) {
 // "Gain 10 M€. Decrease your M€ production 1 step."
 // =============================================================================
 func TestInvestmentLoan_GainCreditsLoseProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Investment Loan")
@@ -4140,8 +4047,7 @@ func TestCaretakerContract_ActionSpendHeatGainTR(t *testing.T) {
 // "Increase your plant production 2 steps." Requires -14C or colder.
 // =============================================================================
 func TestDesignedMicroorganisms_PlantProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Designed Microorganisms")
@@ -4166,8 +4072,7 @@ func TestDesignedMicroorganisms_PlantProduction(t *testing.T) {
 		"Plant production should increase by 2")
 }
 func TestDesignedMicroorganisms_FailsAboveMaxTemp(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Designed Microorganisms")
@@ -4186,7 +4091,8 @@ func TestDesignedMicroorganisms_FailsAboveMaxTemp(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := shared.NativePayment(shared.ResourceCredit, 16)
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Designed Microorganisms should fail when temperature is above -14C")
+	testutil.AssertErrorContains(t, err, "temperature requirement not met", "Designed Microorganisms should fail when temperature is above -14C")
+	testutil.AssertTrue(t, p.Hand().HasCard(card.ID), "rejected card stays in hand")
 }
 
 // =============================================================================
@@ -4195,8 +4101,7 @@ func TestDesignedMicroorganisms_FailsAboveMaxTemp(t *testing.T) {
 // you gain 3 M€."
 // =============================================================================
 func TestStandardTechnology_Gain3Credits(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Standard Technology")
@@ -4235,8 +4140,7 @@ func TestStandardTechnology_Gain3Credits(t *testing.T) {
 // "Gain +2 global parameter requirement lenience."
 // =============================================================================
 func TestAdaptationTechnology_GlobalParameterLenience(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Adaptation Technology")
@@ -4264,8 +4168,7 @@ func TestAdaptationTechnology_GlobalParameterLenience(t *testing.T) {
 // "All cards cost 2 M€ less." Requires 7 science tags.
 // =============================================================================
 func TestAntiGravityTechnology_Discount(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Anti-Gravity Technology")
@@ -4304,8 +4207,7 @@ func TestAntiGravityTechnology_Discount(t *testing.T) {
 		"Anti-Gravity Technology should be in played cards")
 }
 func TestAntiGravityTechnology_FailsWithInsufficientScienceTags(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Anti-Gravity Technology")
@@ -4325,7 +4227,8 @@ func TestAntiGravityTechnology_FailsWithInsufficientScienceTags(t *testing.T) {
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := shared.NativePayment(shared.ResourceCredit, 14)
 	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Anti-Gravity Technology should fail without 7 science tags")
+	testutil.AssertErrorContains(t, err, "tag requirements need 7 additional tags", "Anti-Gravity Technology should fail without 7 science tags")
+	testutil.AssertTrue(t, p.Hand().HasCard(card.ID), "rejected card stays in hand")
 }
 
 // =============================================================================
@@ -4333,8 +4236,7 @@ func TestAntiGravityTechnology_FailsWithInsufficientScienceTags(t *testing.T) {
 // "Increase your energy production and your steel production 1 step each."
 // =============================================================================
 func TestIndustrialMicrobes_IncreasesEnergyAndSteelProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	industrialMicrobes := testutil.GetCardByName("Industrial Microbes")
@@ -4364,8 +4266,7 @@ func TestIndustrialMicrobes_IncreasesEnergyAndSteelProduction(t *testing.T) {
 // "Requires -24C or warmer. Increase your plant production 1 step."
 // =============================================================================
 func TestLichen_IncreasesPlantProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	lichen := testutil.GetCardByName("Lichen")
@@ -4398,8 +4299,7 @@ func TestLichen_IncreasesPlantProduction(t *testing.T) {
 // "Increase your heat production 1 step and gain 3 heat."
 // =============================================================================
 func TestImportedGHG_IncreasesHeatProductionAndGainsHeat(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	importedGHG := testutil.GetCardByName("Imported GHG")
@@ -4431,8 +4331,7 @@ func TestImportedGHG_IncreasesHeatProductionAndGainsHeat(t *testing.T) {
 // "Increase your heat production 1 step."
 // =============================================================================
 func TestMicroMills_IncreasesHeatProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	microMills := testutil.GetCardByName("Micro-Mills")
@@ -4461,8 +4360,7 @@ func TestMicroMills_IncreasesHeatProduction(t *testing.T) {
 // "Decrease your energy production 4 steps and increase your plant production 2 steps. Raise your TR 3 steps."
 // =============================================================================
 func TestMagneticFieldGenerators_ProductionAndTR(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	magneticFieldGenerators := testutil.GetCardByName("Magnetic Field Generators")
@@ -4498,8 +4396,7 @@ func TestMagneticFieldGenerators_ProductionAndTR(t *testing.T) {
 // "Increase your heat production 2 steps."
 // =============================================================================
 func TestImportOfAdvancedGHG_IncreasesHeatProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	importAdvGHG := testutil.GetCardByName("Import Of Advanced GHG")
@@ -4528,8 +4425,7 @@ func TestImportOfAdvancedGHG_IncreasesHeatProduction(t *testing.T) {
 // "Requires -6C or warmer. Increase your plant production 1 step and your M$ production 2 steps. Gain 1 plant."
 // =============================================================================
 func TestTundraFarming_ProductionAndPlant(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	tundraFarming := testutil.GetCardByName("Tundra Farming")
@@ -4566,8 +4462,7 @@ func TestTundraFarming_ProductionAndPlant(t *testing.T) {
 // "Add 2 microbes to another card. Increase your heat production 3 steps and your plant production 1 step."
 // =============================================================================
 func TestAerobrakedAmmoniaAsteroid_ProductionIncrease(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	aerobrakedAsteroid := testutil.GetCardByName("Aerobraked Ammonia Asteroid")
@@ -4608,8 +4503,7 @@ func TestAerobrakedAmmoniaAsteroid_ProductionIncrease(t *testing.T) {
 // "Decrease your energy production 2 steps and increase your plant production 1 step. Raise your terraform rating 1 step."
 // =============================================================================
 func TestMagneticFieldDome_ProductionAndTR(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	magneticFieldDome := testutil.GetCardByName("Magnetic Field Dome")
@@ -4645,8 +4539,7 @@ func TestMagneticFieldDome_ProductionAndTR(t *testing.T) {
 // "Increase your M$ production 1 step for each space tag you have, including this."
 // =============================================================================
 func TestSatellites_CreditProductionPerSpaceTag(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	satellites := testutil.GetCardByName("Satellites")
@@ -4677,8 +4570,7 @@ func TestSatellites_CreditProductionPerSpaceTag(t *testing.T) {
 		"Credit production should increase by 3 (1 per each of 2 existing + 1 self space tag)")
 }
 func TestSatellites_ZeroExistingSpaceTags(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	satellites := testutil.GetCardByName("Satellites")
@@ -4709,8 +4601,7 @@ func TestSatellites_ZeroExistingSpaceTags(t *testing.T) {
 // "Requires -20C or warmer. Increase your M$ production 1 step and gain 2 plants."
 // =============================================================================
 func TestNoctisFarming_ProductionAndPlants(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	noctisFarming := testutil.GetCardByName("Noctis Farming")
@@ -4746,8 +4637,7 @@ func TestNoctisFarming_ProductionAndPlants(t *testing.T) {
 // "Decrease your energy production 1 step and increase your plant production 1 step."
 // =============================================================================
 func TestSoilFactory_SwapsEnergyForPlantProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	soilFactory := testutil.GetCardByName("Soil Factory")
@@ -4780,8 +4670,7 @@ func TestSoilFactory_SwapsEnergyForPlantProduction(t *testing.T) {
 // "Decrease your energy production 1 step and increase your titanium and your M$ production 1 step each."
 // =============================================================================
 func TestFuelFactory_SwapsEnergyForTitaniumAndCreditProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	fuelFactory := testutil.GetCardByName("Fuel Factory")
@@ -4815,8 +4704,7 @@ func TestFuelFactory_SwapsEnergyForTitaniumAndCreditProduction(t *testing.T) {
 // "Requires 2 cities in play. Increase your M$ production 1 step."
 // =============================================================================
 func TestRadSuits_IncreasesCreditProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	radSuits := testutil.GetCardByName("Rad-Suits")
@@ -4845,8 +4733,7 @@ func TestRadSuits_IncreasesCreditProduction(t *testing.T) {
 // "Draw 1 card."
 // =============================================================================
 func TestLagrangeObservatory_DrawsCard(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	lagrange := testutil.GetCardByName("Lagrange Observatory")
@@ -4877,8 +4764,7 @@ func TestLagrangeObservatory_DrawsCard(t *testing.T) {
 // "Increase your M$ production 5 steps."
 // =============================================================================
 func TestImmigrationShuttles_IncreasesCreditProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	immigrationShuttles := testutil.GetCardByName("Immigration Shuttles")
@@ -4907,8 +4793,7 @@ func TestImmigrationShuttles_IncreasesCreditProduction(t *testing.T) {
 // "Increase your heat production 7 steps."
 // =============================================================================
 func TestSoletta_IncreasesHeatProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	soletta := testutil.GetCardByName("Soletta")
@@ -4937,8 +4822,7 @@ func TestSoletta_IncreasesHeatProduction(t *testing.T) {
 // "Draw 2 cards."
 // =============================================================================
 func TestTechnologyDemonstration_DrawsTwoCards(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	techDemo := testutil.GetCardByName("Technology Demonstration")
@@ -4969,8 +4853,7 @@ func TestTechnologyDemonstration_DrawsTwoCards(t *testing.T) {
 // "Decrease your energy production 1 step. Raise your terraform rating 2 steps."
 // =============================================================================
 func TestRadChemFactory_ProductionAndTR(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	radChemFactory := testutil.GetCardByName("Rad-Chem Factory")
@@ -5005,8 +4888,7 @@ func TestRadChemFactory_ProductionAndTR(t *testing.T) {
 // "Increase your M$ production 1 step for every 2 building tags you have, including this."
 // =============================================================================
 func TestMedicalLab_CreditProductionPerTwoBuildingTags(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	medicalLab := testutil.GetCardByName("Medical Lab")
@@ -5039,8 +4921,7 @@ func TestMedicalLab_CreditProductionPerTwoBuildingTags(t *testing.T) {
 		"Credit production should increase by 2 (4 building tags / 2)")
 }
 func TestMedicalLab_OddNumberOfBuildingTags(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	medicalLab := testutil.GetCardByName("Medical Lab")
@@ -5076,8 +4957,7 @@ func TestMedicalLab_OddNumberOfBuildingTags(t *testing.T) {
 // "Action: Add 1 microbe to this card, or remove 3 microbes to increase your TR 1 step. Add 3 microbes to this card."
 // =============================================================================
 func TestNitriteReducingBacteria_OnPlay_AddsThreeMicrobes(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	nitriteReducing := testutil.GetCardByName("Nitrite Reducing Bacteria")
@@ -5100,8 +4980,7 @@ func TestNitriteReducingBacteria_OnPlay_AddsThreeMicrobes(t *testing.T) {
 	testutil.AssertEqual(t, 3, microbeStorage, "Should have 3 microbes on card after playing")
 }
 func TestNitriteReducingBacteria_Action_AddMicrobe(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	nitriteReducing := testutil.GetCardByName("Nitrite Reducing Bacteria")
@@ -5128,8 +5007,7 @@ func TestNitriteReducingBacteria_Action_AddMicrobe(t *testing.T) {
 	testutil.AssertEqual(t, 4, p.Resources().GetCardStorage(nitriteReducing.ID), "Card should have 4 microbes after adding 1")
 }
 func TestNitriteReducingBacteria_Action_Remove3MicrobesForTR(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	nitriteReducing := testutil.GetCardByName("Nitrite Reducing Bacteria")
@@ -5178,8 +5056,9 @@ func TestNitriteReducingBacteria_Action_FailsWithInsufficientMicrobes(t *testing
 	})
 	choiceIndex := 1
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
-	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, &choiceIndex, []string{cardID}, nil, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Choice 1 should fail with only 2 microbes (need 3)")
+	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 1, &choiceIndex, []string{cardID}, nil, nil, nil, nil, nil, nil)
+	testutil.AssertErrorContains(t, err, "insufficient resources on card", "Choice 1 should fail with only 2 microbes (need 3)")
+	testutil.AssertEqual(t, 2, p.Resources().GetCardStorage(cardID), "microbes unchanged")
 }
 
 // =============================================================================
@@ -5249,9 +5128,11 @@ func TestWaterSplittingPlant_FailsWithoutEnoughEnergy(t *testing.T) {
 			Behavior:      behavior,
 		},
 	})
+	before := p.Resources().Get()
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Water Splitting Plant should fail without enough energy")
+	testutil.AssertErrorContains(t, err, "payment exceeds available source pool", "Water Splitting Plant should fail without enough energy")
+	testutil.AssertEqual(t, before, p.Resources().Get(), "rejected action spends nothing")
 }
 
 // =============================================================================
@@ -5260,8 +5141,7 @@ func TestWaterSplittingPlant_FailsWithoutEnoughEnergy(t *testing.T) {
 // "Decrease your plant production 1 step and increase your M$ production 2 steps."
 // =============================================================================
 func TestLivestock_OnPlay_ChangesProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	livestock := testutil.GetCardByName("Livestock")
@@ -5293,8 +5173,7 @@ func TestLivestock_OnPlay_ChangesProduction(t *testing.T) {
 	testutil.AssertEqual(t, prodBefore.Plants-1, prodAfter.Plants, "Plant production should decrease by 1")
 }
 func TestLivestock_Action_AddAnimal(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	livestock := testutil.GetCardByName("Livestock")
@@ -5393,9 +5272,11 @@ func TestUndergroundDetonations_FailsWithInsufficientCredits(t *testing.T) {
 			Behavior:      behavior,
 		},
 	})
+	before := p.Resources().Get()
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Underground Detonations should fail without enough credits")
+	testutil.AssertErrorContains(t, err, "payment exceeds available source pool", "Underground Detonations should fail without enough credits")
+	testutil.AssertEqual(t, before, p.Resources().Get(), "rejected action spends nothing")
 }
 
 // =============================================================================
@@ -5403,8 +5284,7 @@ func TestUndergroundDetonations_FailsWithInsufficientCredits(t *testing.T) {
 // "Action: Draw 2 cards. Requires 3 science tags to play. Decrease your energy production 1 step."
 // =============================================================================
 func TestAICentral_OnPlay_DecreasesEnergyProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	aiCentral := testutil.GetCardByName("AI Central")
@@ -5438,8 +5318,7 @@ func TestAICentral_OnPlay_DecreasesEnergyProduction(t *testing.T) {
 	testutil.AssertEqual(t, prodBefore.Energy-1, prodAfter.Energy, "Energy production should decrease by 1")
 }
 func TestAICentral_Action_DrawTwoCards(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	aiCentral := testutil.GetCardByName("AI Central")
@@ -5481,8 +5360,7 @@ func TestAICentral_Action_DrawTwoCards(t *testing.T) {
 // "Requires 2 power tags. Decrease any energy production 1 step and increase your own 1 step."
 // =============================================================================
 func TestPowerSupplyConsortium_StealEnergyProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	powerSupplyConsortium := testutil.GetCardByName("Power Supply Consortium")
@@ -5527,8 +5405,7 @@ func TestPowerSupplyConsortium_StealEnergyProduction(t *testing.T) {
 // "Decrease any energy production 1 step and increase your own 1 step."
 // =============================================================================
 func TestEnergyTapping_StealEnergyProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	energyTapping := testutil.GetCardByName("Energy Tapping")
@@ -5563,8 +5440,7 @@ func TestEnergyTapping_StealEnergyProduction(t *testing.T) {
 		"Target energy production should decrease by 1")
 }
 func TestEnergyTapping_SoloMode(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	energyTapping := testutil.GetCardByName("Energy Tapping")
@@ -5595,8 +5471,7 @@ func TestEnergyTapping_SoloMode(t *testing.T) {
 // "Decrease any heat production 2 steps and increase your energy production 1 step."
 // =============================================================================
 func TestHeatTrappers_StealHeatProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	heatTrappers := testutil.GetCardByName("Heat Trappers")
@@ -5636,8 +5511,7 @@ func TestHeatTrappers_StealHeatProduction(t *testing.T) {
 // "Requires 6% oxygen. Decrease any plant production 1 step and increase your energy production 2 steps."
 // =============================================================================
 func TestBiomassCombustors_StealPlantProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	biomassCombustors := testutil.GetCardByName("Biomass Combustors")
@@ -5682,8 +5556,7 @@ func TestBiomassCombustors_StealPlantProduction(t *testing.T) {
 // "Effect: When you play a space card, you pay 2 M$ less for it."
 // =============================================================================
 func TestShuttles_OnPlay_ProductionChanges(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	shuttles := testutil.GetCardByName("Shuttles")
@@ -5782,17 +5655,18 @@ func TestRestrictedArea_FailsWithoutEnoughCredits(t *testing.T) {
 			Behavior:      behavior,
 		},
 	})
+	before := p.Resources().Get()
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Restricted Area should fail without enough credits")
+	testutil.AssertErrorContains(t, err, "payment exceeds available source pool", "Restricted Area should fail without enough credits")
+	testutil.AssertEqual(t, before, p.Resources().Get(), "rejected action spends nothing")
 }
 
 // --- Mining Rights (067) ---
 // "Place this tile on an area with a steel or titanium placement bonus. Increase that production 1 step."
 // This card should NOT require a choice index — the production increase is determined by the tile bonus.
 func TestMiningRights_PlaceOnSteelBonus_IncreaseSteelProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Mining Rights")
@@ -5827,8 +5701,6 @@ func TestMiningRights_PlaceOnSteelBonus_IncreaseSteelProduction(t *testing.T) {
 	_, err = selectTileAction.Execute(ctx, testGame.ID(), p.ID(), steelBonusHex)
 	testutil.AssertNoError(t, err, "Should be able to select steel bonus hex")
 
-	time.Sleep(50 * time.Millisecond)
-
 	prodAfter := p.Resources().Production()
 	testutil.AssertEqual(t, prodBefore.Steel+1, prodAfter.Steel,
 		"Steel production should increase by 1 when mining tile placed on steel bonus")
@@ -5837,8 +5709,7 @@ func TestMiningRights_PlaceOnSteelBonus_IncreaseSteelProduction(t *testing.T) {
 }
 
 func TestMiningRights_PlaceOnTitaniumBonus_IncreaseTitaniumProduction(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Mining Rights")
@@ -5873,8 +5744,6 @@ func TestMiningRights_PlaceOnTitaniumBonus_IncreaseTitaniumProduction(t *testing
 	_, err = selectTileAction.Execute(ctx, testGame.ID(), p.ID(), titaniumBonusHex)
 	testutil.AssertNoError(t, err, "Should be able to select titanium bonus hex")
 
-	time.Sleep(50 * time.Millisecond)
-
 	prodAfter := p.Resources().Production()
 	testutil.AssertEqual(t, prodBefore.Titanium+1, prodAfter.Titanium,
 		"Titanium production should increase by 1 when mining tile placed on titanium bonus")
@@ -5886,8 +5755,7 @@ func TestMiningRights_PlaceOnTitaniumBonus_IncreaseTitaniumProduction(t *testing
 // "Spend 5 heat to either gain 4 plants, or to add 2 animals to another card."
 // Should fail if player has less than 5 heat.
 func TestLocalHeatTrapping_FailsWithInsufficientHeat(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Local Heat Trapping")
@@ -5905,13 +5773,14 @@ func TestLocalHeatTrapping_FailsWithInsufficientHeat(t *testing.T) {
 	p.Hand().AddCard(card.ID)
 	playCardAction := cardAction.NewPlayCardAction(repo, cardRegistry, nil, logger)
 	payment := shared.NativePayment(shared.ResourceCredit, 1)
-	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, nil, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Local Heat Trapping should fail with only 1 heat")
+	choiceIndex := 0
+	err := playCardAction.Execute(ctx, testGame.ID(), p.ID(), card.ID, payment, &choiceIndex, nil, nil, nil, nil)
+	testutil.AssertErrorContains(t, err, "not enough heat", "Local Heat Trapping should fail with only 1 heat")
+	testutil.AssertTrue(t, p.Hand().HasCard(card.ID), "rejected card stays in hand")
 }
 
 func TestLocalHeatTrapping_PlaysWithSufficientHeat(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Local Heat Trapping")
@@ -5948,8 +5817,7 @@ func TestLocalHeatTrapping_PlaysWithSufficientHeat(t *testing.T) {
 //
 //	Decrease your energy production 1 step and decrease your M€ production 2 steps. Place a city tile."
 func TestImmigrantCity_ProductionAndCityPlacement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 	card := testutil.GetCardByName("Immigrant City")
@@ -6286,7 +6154,7 @@ func TestSearchForLife_RevealsAndDiscardsBeforeReward(t *testing.T) {
 			if snapshot.CurrentPlayer.PendingCardReveal == nil {
 				t.Fatal("reconnect DTO must retain reveal")
 			}
-			testutil.AssertError(t, baseaction.ValidateNoPendingSelections(g, id, testutil.TestLogger()), "pending reveal locks other actions")
+			testutil.AssertErrorContains(t, baseaction.ValidateNoPendingSelections(g, id, testutil.TestLogger()), "pending selection", "pending reveal locks other actions")
 			diffs, err := stateRepo.GetDiff(context.Background(), g.ID())
 			testutil.AssertNoError(t, err, "get reveal log")
 			if len(diffs) == 0 {
@@ -6298,14 +6166,14 @@ func TestSearchForLife_RevealsAndDiscardsBeforeReward(t *testing.T) {
 			}
 			testutil.AssertEqual(t, testutil.CardID(tc.top), dto.ToStateDiffDto(diff).DisplayData.RevealedCards[0].CardID, "public log DTO")
 			confirm := confirmAction.NewConfirmCardRevealAction(repo)
-			testutil.AssertError(t, confirm.Execute(context.Background(), g.ID(), opponentID), "opponent cannot confirm")
+			testutil.AssertErrorContains(t, confirm.Execute(context.Background(), g.ID(), opponentID), "not your turn", "opponent cannot confirm")
 			testutil.AssertNoError(t, confirm.Execute(context.Background(), g.ID(), id), "acknowledge reveal")
 			testutil.AssertEqual(t, opponentID, g.CurrentTurn().PlayerID(), "advance after acknowledgement")
-			testutil.AssertError(t, confirm.Execute(context.Background(), g.ID(), id), "cannot acknowledge twice")
+			testutil.AssertNoError(t, g.SetCurrentTurn(context.Background(), id, 2), "restore owner turn")
+			testutil.AssertErrorContains(t, confirm.Execute(context.Background(), g.ID(), id), "no pending card reveal", "cannot acknowledge twice")
 			testutil.AssertEqual(t, tc.science, p.Resources().GetCardStorage(card.ID), "confirmation never rewards again")
 			testutil.AssertEqual(t, before-1, p.Resources().Get().Credits, "confirmation never charges again")
-			testutil.AssertNoError(t, g.SetCurrentTurn(context.Background(), id, 2), "restore owner turn")
-			testutil.AssertError(t, use.Execute(context.Background(), g.ID(), id, card.ID, 0, nil, nil, nil, nil, nil, nil, nil, nil), "cannot reuse this generation")
+			testutil.AssertErrorContains(t, use.Execute(context.Background(), g.ID(), id, card.ID, 0, nil, nil, nil, nil, nil, nil, nil, nil), "action already played this generation", "cannot reuse this generation")
 
 		})
 	}
@@ -6329,7 +6197,11 @@ func TestSearchForLife_RejectedActionsDoNotMutate(t *testing.T) {
 			}
 			credits, drawn, actions := p.Resources().Get().Credits, g.Deck().DrawnCardCount(), g.CurrentTurn().ActionsRemaining()
 			use := cardAction.NewUseCardActionAction(repo, registry, nil, testutil.TestLogger())
-			testutil.AssertError(t, use.Execute(context.Background(), g.ID(), id, card.ID, 0, nil, nil, nil, nil, nil, nil, nil, nil), "reject unavailable action")
+			wantErr := "payment exceeds available source pool"
+			if emptyDeck {
+				wantErr = "not enough cards available to reveal"
+			}
+			testutil.AssertErrorContains(t, use.Execute(context.Background(), g.ID(), id, card.ID, 0, nil, nil, nil, nil, nil, nil, nil, nil), wantErr, "reject unavailable action")
 			testutil.AssertEqual(t, credits, p.Resources().Get().Credits, "no charge")
 			testutil.AssertEqual(t, drawn, g.Deck().DrawnCardCount(), "no draw")
 			testutil.AssertEqual(t, actions, g.CurrentTurn().ActionsRemaining(), "no action consumed")
@@ -6369,7 +6241,7 @@ func checkRequirementStepBoundaries(t *testing.T, sources []string, allowedSteps
 					target := gamecards.Card{ID: "step-boundary", Name: "Step boundary", Type: gamecards.CardTypeAutomated, Cost: 5,
 						Requirements: &gamecards.CardRequirements{Items: []gamecards.Requirement{requirement}}}
 					registry := testutil.CreateTestCardRegistryWithAdditionalCards([]gamecards.Card{target})
-					g, repo := testutil.CreateTestGameWithPlayers(t, 1, testutil.NewMockBroadcaster())
+					g, repo := testutil.CreateTestGameWithPlayers(t, 1)
 					p := g.GetAllPlayers()[0]
 					p.SetCorporationID(testutil.CardID("Tharsis Republic"))
 					testutil.AssertNoError(t, g.UpdateStatus(ctx, shared.GameStatusActive), "Activate game")
@@ -6408,7 +6280,7 @@ func checkRequirementStepBoundaries(t *testing.T, sources []string, allowedSteps
 						testutil.AssertNoError(t, err, "Play at exact allowance boundary")
 						testutil.AssertTrue(t, p.PlayedCards().Contains(target.ID), "Target must be played")
 					} else {
-						testutil.AssertError(t, err, "Reject one step outside allowance")
+						testutil.AssertErrorContains(t, err, "requirement not met", "Reject one step outside allowance")
 						testutil.AssertEqual(t, before, p.Resources().Get(), "Rejected play must not charge")
 						testutil.AssertTrue(t, p.Hand().HasCard(target.ID), "Rejected card stays in hand")
 						testutil.AssertEqual(t, effectsBefore, len(p.Effects().List()), "Rejected play preserves modifiers")
@@ -6441,7 +6313,7 @@ func TestSpecialDesign_LifetimePreservesPermanentModifiers(t *testing.T) {
 				target.Requirements = &gamecards.CardRequirements{Items: []gamecards.Requirement{{Type: gamecards.RequirementTemperature, Min: &minimum}}}
 			}
 			registry := testutil.CreateTestCardRegistryWithAdditionalCards([]gamecards.Card{target})
-			g, repo := testutil.CreateTestGameWithPlayers(t, 1, testutil.NewMockBroadcaster())
+			g, repo := testutil.CreateTestGameWithPlayers(t, 1)
 			p := g.GetAllPlayers()[0]
 			testutil.AssertNoError(t, g.UpdateStatus(ctx, shared.GameStatusActive), "Activate game")
 			testutil.AssertNoError(t, g.UpdatePhase(ctx, shared.GamePhaseAction), "Action phase")
@@ -6652,23 +6524,23 @@ func TestPets_BlocksSpendingAndTransfersAcrossGenerations(t *testing.T) {
 	owner.Effects().RemoveTemporaryEffects(shared.TemporaryGenerationEnd)
 	owner.Effects().RemoveTemporaryEffects(shared.TemporaryNextCard)
 	applier := gamecards.NewBehaviorApplier(owner, g, "Pets", testutil.TestLogger()).WithSourceCardID(pets.ID).WithCardRegistry(registry)
-	testutil.AssertError(t, applier.ApplyInputs(ctx, []shared.BehaviorCondition{shared.NewBasicResourceCondition(shared.ResourceCredit, 2, "self-player"), shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "self-card")}), "cannot spend Pets")
+	testutil.AssertErrorContains(t, applier.ApplyInputs(ctx, []shared.BehaviorCondition{shared.NewBasicResourceCondition(shared.ResourceCredit, 2, "self-player"), shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "self-card")}), "animal are protected", "cannot spend Pets")
 	testutil.AssertEqual(t, 90, owner.Resources().Get().Credits, "other input not spent")
-	testutil.AssertError(t, applier.ApplyOutputs(ctx, []shared.BehaviorCondition{shared.NewBasicResourceCondition(shared.ResourceCredit, 2, "self-player"), shared.NewCardStorageCondition(shared.ResourceAnimal, -1, "self-card")}), "cannot remove Pets")
+	testutil.AssertErrorContains(t, applier.ApplyOutputs(ctx, []shared.BehaviorCondition{shared.NewBasicResourceCondition(shared.ResourceCredit, 2, "self-player"), shared.NewCardStorageCondition(shared.ResourceAnimal, -1, "self-card")}), "card resources are protected", "cannot remove Pets")
 	testutil.AssertEqual(t, 90, owner.Resources().Get().Credits, "other output not applied")
 	owner.Resources().AddPaymentSubstitute(shared.PaymentSubstitute{Source: shared.PaymentSource{Target: "self-card", CardID: pets.ID, Resource: shared.ResourceAnimal}, ConversionRate: 1, TargetResource: shared.ResourceCredit})
 	virus := testutil.GetCardByName("Virus")
 	owner.Hand().AddCard(virus.ID)
 	choice := 1
 	testutil.AssertNoError(t, g.SetCurrentTurn(ctx, ownerID, 2), "turn")
-	testutil.AssertError(t, play.Execute(ctx, g.ID(), ownerID, virus.ID, shared.Payment{Allocations: []shared.PaymentAllocation{{Source: shared.PaymentSource{Target: "self-card", Resource: "animal", CardID: pets.ID},
+	testutil.AssertErrorContains(t, play.Execute(ctx, g.ID(), ownerID, virus.ID, shared.Payment{Allocations: []shared.PaymentAllocation{{Source: shared.PaymentSource{Target: "self-card", Resource: "animal", CardID: pets.ID},
 		TargetResource: shared.ResourceCredit, Amount: 1}},
-	}, &choice, nil, nil, nil, nil), "Pets cannot pay")
+	}, &choice, nil, nil, nil, nil), "ineligible payment source for credit", "Pets cannot pay")
 	testutil.AssertTrue(t, owner.Hand().HasCard(virus.ID), "payment rejection retains card")
 	for _, actorID := range []string{ownerID, otherID} {
 		actor, _ := g.GetPlayer(actorID)
 		transfer := gamecards.NewBehaviorApplier(actor, g, "Predators", testutil.TestLogger()).WithSourceCardID(testutil.CardID("Predators")).WithStealSourceCardID(pets.ID).WithCardRegistry(registry)
-		testutil.AssertError(t, transfer.ApplyOutputs(ctx, []shared.BehaviorCondition{shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "steal-from-any-card")}), "Pets cannot transfer")
+		testutil.AssertErrorContains(t, transfer.ApplyOutputs(ctx, []shared.BehaviorCondition{shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "steal-from-any-card")}), "are protected", "Pets cannot transfer")
 	}
 	testutil.AssertEqual(t, 1, owner.Resources().GetCardStorage(pets.ID), "animal retained")
 	testutil.PlaceTileForPlayer(ctx, t, g, repo, otherID, "city", floodingLandHexA)
@@ -6829,7 +6701,7 @@ func TestArtificialLake_NoLandVersusOceanMaximum(t *testing.T) {
 				vp := gamecards.CalculatePlayerVP(p, g, nil, nil, g.GetAllPlayers(), registry, nil, nil)
 				testutil.AssertEqual(t, 1, vp.CardVP, "retain fixed VP")
 			} else {
-				testutil.AssertError(t, err, "mandatory ocean has no legal land")
+				testutil.AssertErrorContains(t, err, "No ocean tiles remaining", "mandatory ocean has no legal land")
 				testutil.AssertEqual(t, 100, p.Resources().Get().Credits, "no payment")
 				testutil.AssertTrue(t, p.Hand().HasCard(card.ID), "card retained")
 			}
@@ -6903,7 +6775,7 @@ func TestGeneRepair_CannotSupplyOwnRequirement(t *testing.T) {
 	p.Resources().Add(map[shared.ResourceType]int{shared.ResourceCredit: 100})
 	testutil.AssertFalse(t, baseaction.CalculatePlayerCardState(&card, p, g, registry).Available(), "one science and one wild are insufficient")
 	play := cardAction.NewPlayCardAction(repo, registry, nil, testutil.TestLogger())
-	testutil.AssertError(t, play.Execute(context.Background(), g.ID(), id, card.ID, shared.NativePayment(shared.ResourceCredit, card.Cost), nil, nil, nil, nil, nil), "own tag cannot meet requirement")
+	testutil.AssertErrorContains(t, play.Execute(context.Background(), g.ID(), id, card.ID, shared.NativePayment(shared.ResourceCredit, card.Cost), nil, nil, nil, nil, nil), "tag requirements need 2 additional tags", "own tag cannot meet requirement")
 	third := testutil.GetCardByName("Trans-Neptune Probe")
 	p.PlayedCards().AddCard(third.ID, third.Name, string(third.Type), nil)
 	testutil.AssertTrue(t, baseaction.CalculatePlayerCardState(&card, p, g, registry).Available(), "two science and one wild suffice")
@@ -7066,7 +6938,7 @@ func TestResearchOutpost_AdjacencyAndPermanentDiscount(t *testing.T) {
 			selectTile := tileAction.NewSelectTileAction(repo, registry, nil, testutil.TestLogger())
 			if adjacent != "" {
 				_, err := selectTile.Execute(ctx, g.ID(), id, center.String())
-				testutil.AssertError(t, err, "invalid adjacency rejected")
+				testutil.AssertErrorContains(t, err, "is not valid for placement", "invalid adjacency rejected")
 			}
 			_, err := selectTile.Execute(ctx, g.ID(), id, selection.AvailableHexes[0])
 			testutil.AssertNoError(t, err, "legal placement")

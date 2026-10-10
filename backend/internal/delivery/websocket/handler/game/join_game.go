@@ -12,6 +12,12 @@ import (
 	"github.com/google/uuid"
 )
 
+// Broadcaster interface for explicit broadcasting
+type Broadcaster interface {
+	BroadcastGameState(gameID string, playerIDs []string)
+	SendInitialLogs(gameID string, playerID string)
+}
+
 // JoinGameHandler handles join game requests.
 type JoinGameHandler struct {
 	joinGameAction *gameaction.JoinGameAction
@@ -43,7 +49,7 @@ func (h *JoinGameHandler) HandleMessage(ctx context.Context, connection *core.Co
 	payloadMap, ok := message.Payload.(map[string]interface{})
 	if !ok {
 		log.Error("Invalid payload format")
-		h.sendError(connection, "Invalid payload format")
+		connection.SendError(message.Type, "Invalid payload format")
 		return
 	}
 
@@ -53,13 +59,13 @@ func (h *JoinGameHandler) HandleMessage(ctx context.Context, connection *core.Co
 
 	if gameID == "" {
 		log.Error("Missing gameId")
-		h.sendError(connection, "Missing gameId")
+		connection.SendError(message.Type, "Missing gameId")
 		return
 	}
 
 	if playerName == "" {
 		log.Error("Missing playerName")
-		h.sendError(connection, "Missing playerName")
+		connection.SendError(message.Type, "Missing playerName")
 		return
 	}
 
@@ -74,44 +80,19 @@ func (h *JoinGameHandler) HandleMessage(ctx context.Context, connection *core.Co
 		slog.String("player_name", playerName),
 		slog.String("player_id", playerID))
 
-	connection.SetPlayer(playerID, gameID)
-
 	result, err := h.joinGameAction.Execute(ctx, gameID, playerName, playerID)
 	if err != nil {
-		log.Error("Failed to execute join game action", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		log.Warn("Failed to join game", slog.Any("error", err))
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
-	log.Debug("Game joined",
-		slog.String("player_id", result.PlayerID))
-
+	connection.BindPlayer(gameID, result.PlayerID)
 	h.broadcaster.BroadcastGameState(gameID, nil)
-	log.Debug("Broadcasted game state to all players")
-
-	h.broadcaster.SendInitialLogs(gameID, playerID)
-	log.Debug("Sent initial logs to player")
-
-	response := dto.WebSocketMessage{
-		Type:   dto.MessageTypePlayerConnected,
-		GameID: gameID,
-		Payload: map[string]interface{}{
-			"playerID":   result.PlayerID,
-			"playerName": playerName,
-			"success":    true,
-		},
-	}
-
-	connection.Send <- response
-	log.Debug("Sent player connected confirmation")
-}
-
-// sendError sends an error message to the client
-func (h *JoinGameHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	}
+	h.broadcaster.SendInitialLogs(gameID, result.PlayerID)
+	connection.Send(dto.WebSocketMessage{
+		Type:    dto.MessageTypePlayerConnected,
+		GameID:  gameID,
+		Payload: dto.PlayerConnectedPayload{PlayerID: result.PlayerID, PlayerName: playerName},
+	})
 }

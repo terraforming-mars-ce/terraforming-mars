@@ -77,7 +77,7 @@ func TestConvertToBot_NotHost_Fails(t *testing.T) {
 	}
 
 	err := convert.Execute(ctx, g.ID(), nonHostRequester, target)
-	testutil.AssertError(t, err, "Non-host should not be able to convert")
+	testutil.AssertErrorContains(t, err, "only host can convert players to bots", "Non-host should not be able to convert")
 }
 
 func TestConvertToBot_Self_Fails(t *testing.T) {
@@ -93,7 +93,7 @@ func TestConvertToBot_Self_Fails(t *testing.T) {
 	hostID := g.HostPlayerID()
 
 	err := convert.Execute(ctx, g.ID(), hostID, hostID)
-	testutil.AssertError(t, err, "Should not be able to convert yourself")
+	testutil.AssertErrorContains(t, err, "cannot convert yourself to a bot", "Should not be able to convert yourself")
 }
 
 func TestConvertToBot_AlreadyBot_Fails(t *testing.T) {
@@ -122,7 +122,7 @@ func TestConvertToBot_AlreadyBot_Fails(t *testing.T) {
 
 	// Convert again - should fail
 	err = convert.Execute(ctx, g.ID(), hostID, targetID)
-	testutil.AssertError(t, err, "Should not convert already-bot player")
+	testutil.AssertErrorContains(t, err, "player is already a bot", "Should not convert already-bot player")
 }
 
 func TestConvertToBot_Exited_Fails(t *testing.T) {
@@ -150,7 +150,7 @@ func TestConvertToBot_Exited_Fails(t *testing.T) {
 	target.SetExited(true)
 
 	err := convert.Execute(ctx, g.ID(), hostID, targetID)
-	testutil.AssertError(t, err, "Should not convert exited player")
+	testutil.AssertErrorContains(t, err, "cannot convert exited player to bot", "Should not convert exited player")
 }
 
 // ============================================================================
@@ -183,7 +183,7 @@ func TestPlayerTakeover_BlockedForBot(t *testing.T) {
 	// Try takeover
 	takeoverAction := connection.NewPlayerTakeoverAction(repo, cardRegistry, testutil.TestLogger())
 	_, err := takeoverAction.Execute(ctx, g.ID(), targetID)
-	testutil.AssertError(t, err, "Should not be able to take over a bot player")
+	testutil.AssertErrorContains(t, err, "cannot take over a bot player", "Should not be able to take over a bot player")
 }
 
 // ============================================================================
@@ -191,8 +191,7 @@ func TestPlayerTakeover_BlockedForBot(t *testing.T) {
 // ============================================================================
 
 func TestGameDeletedWhenLastHumanLeavesLobbyWithBots(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	ctx := context.Background()
 
 	// Add a bot player manually
@@ -219,12 +218,11 @@ func TestGameDeletedWhenLastHumanLeavesLobbyWithBots(t *testing.T) {
 
 	// Game should be deleted since only bots remain
 	_, err = repo.Get(ctx, g.ID())
-	testutil.AssertError(t, err, "Game should be deleted when last human leaves")
+	testutil.AssertErrorContains(t, err, "not found", "Game should be deleted when last human leaves")
 }
 
 func TestHostReassignedToHumanNotBot(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := context.Background()
 
 	// Add a bot player

@@ -57,8 +57,8 @@ func TestCardReveal_RoundTripCloneAndValidation(t *testing.T) {
 			t.Fatal("accepted invalid reveal")
 		}
 	}
-	testutil.AssertError(t, json.Unmarshal([]byte(`{"outputs":[{"type":"credit","amount":1,"target":"self-player","destination":"discard"}]}`), &decoded), "reject reveal fields on other types")
-	testutil.AssertError(t, json.Unmarshal([]byte(`{"outputs":[{"type":"card-reveal","amount":1,"target":"self-player","destination":"discard","optional":true}]}`), &decoded), "reject unsupported reveal fields")
+	testutil.AssertErrorContains(t, json.Unmarshal([]byte(`{"outputs":[{"type":"credit","amount":1,"target":"self-player","destination":"discard"}]}`), &decoded), "only valid on card-reveal", "reject reveal fields on other types")
+	testutil.AssertErrorContains(t, json.Unmarshal([]byte(`{"outputs":[{"type":"card-reveal","amount":1,"target":"self-player","destination":"discard","optional":true}]}`), &decoded), "field optional is not valid on card-reveal", "reject unsupported reveal fields")
 }
 
 func TestCardReveal_GenericBatchAndMatchingOnce(t *testing.T) {

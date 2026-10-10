@@ -3,11 +3,14 @@ package admin
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log/slog"
 
 	"openmars/internal/action/admin"
 	"openmars/internal/delivery/dto"
 	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/game"
 	"openmars/internal/game/shared"
 	"openmars/internal/logger"
 )
@@ -17,7 +20,8 @@ type Broadcaster interface {
 	BroadcastGameState(gameID string, playerIDs []string)
 }
 
-// AdminCommandHandler handles admin commands via WebSocket (development mode only)
+// AdminCommandHandler handles admin commands. Only players of a game in development mode
+// may send them.
 type AdminCommandHandler struct {
 	setPhaseAction            *admin.SetPhaseAction
 	setCurrentTurnAction      *admin.SetCurrentTurnAction
@@ -30,6 +34,7 @@ type AdminCommandHandler struct {
 	setTRAction               *admin.SetTRAction
 	restartGameAction         *admin.RestartGameAction
 	setActionsRemainingAction *admin.SetActionsRemainingAction
+	gameRepo                  game.GameRepository
 	broadcaster               Broadcaster
 	logger                    *slog.Logger
 }
@@ -47,6 +52,7 @@ func NewAdminCommandHandler(
 	setTRAction *admin.SetTRAction,
 	restartGameAction *admin.RestartGameAction,
 	setActionsRemainingAction *admin.SetActionsRemainingAction,
+	gameRepo game.GameRepository,
 	broadcaster Broadcaster,
 ) *AdminCommandHandler {
 	return &AdminCommandHandler{
@@ -61,6 +67,7 @@ func NewAdminCommandHandler(
 		setTRAction:               setTRAction,
 		restartGameAction:         restartGameAction,
 		setActionsRemainingAction: setActionsRemainingAction,
+		gameRepo:                  gameRepo,
 		broadcaster:               broadcaster,
 		logger:                    logger.Get(),
 	}
@@ -75,31 +82,40 @@ func (h *AdminCommandHandler) HandleMessage(ctx context.Context, connection *cor
 
 	log.Debug("Processing admin command")
 
-	_, gameID := connection.GetPlayer()
-	if gameID == "" {
-		log.Error("No game ID found for connection")
-		h.sendError(connection, "Not connected to a game")
+	id := connection.Identity()
+	if !id.IsPlayer() {
+		connection.SendError(message.Type, "Admin commands are only available to players in a game")
 		return
 	}
+	g, err := h.gameRepo.Get(ctx, id.GameID)
+	if err != nil {
+		connection.SendError(message.Type, err.Error())
+		return
+	}
+	if !g.Settings().DevelopmentMode {
+		connection.SendError(message.Type, "Admin commands are only available in development mode")
+		return
+	}
+	gameID := id.GameID
 
 	payloadMap, ok := message.Payload.(map[string]interface{})
 	if !ok {
 		log.Error("Invalid payload format")
-		h.sendError(connection, "Invalid payload format")
+		connection.SendError(message.Type, "Invalid payload format")
 		return
 	}
 
 	commandType, ok := payloadMap["commandType"].(string)
 	if !ok {
 		log.Error("Missing or invalid commandType")
-		h.sendError(connection, "Missing or invalid commandType")
+		connection.SendError(message.Type, "Missing or invalid commandType")
 		return
 	}
 
 	commandPayload, ok := payloadMap["payload"]
 	if !ok {
 		log.Error("Missing command payload")
-		h.sendError(connection, "Missing command payload")
+		connection.SendError(message.Type, "Missing command payload")
 		return
 	}
 
@@ -107,7 +123,6 @@ func (h *AdminCommandHandler) HandleMessage(ctx context.Context, connection *cor
 		slog.String("command_type", commandType),
 		slog.String("game_id", gameID))
 
-	var err error
 	switch dto.AdminCommandType(commandType) {
 	case dto.AdminCommandTypeGiveCard:
 		err = h.handleGiveCard(ctx, gameID, commandPayload)
@@ -133,13 +148,13 @@ func (h *AdminCommandHandler) HandleMessage(ctx context.Context, connection *cor
 		err = h.handleSetActionsRemaining(ctx, gameID, commandPayload)
 	default:
 		log.Error("Unknown admin command type", slog.String("command_type", commandType))
-		h.sendError(connection, "Unknown admin command type: "+commandType)
+		connection.SendError(message.Type, "Unknown admin command type: "+commandType)
 		return
 	}
 
 	if err != nil {
 		log.Error("Admin command failed", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
@@ -149,222 +164,131 @@ func (h *AdminCommandHandler) HandleMessage(ctx context.Context, connection *cor
 	log.Debug("Broadcasted game state after admin command")
 }
 
-func (h *AdminCommandHandler) handleGiveCard(ctx context.Context, gameID string, payload interface{}) error {
-	payloadMap, ok := payload.(map[string]interface{})
-	if !ok {
-		return &adminError{message: "Invalid give-card payload"}
+func (h *AdminCommandHandler) handleGiveCard(ctx context.Context, gameID string, payload any) error {
+	var cmd dto.GiveCardAdminCommand
+	if err := decode(payload, &cmd); err != nil {
+		return err
 	}
-
-	playerID, _ := payloadMap["playerId"].(string)
-	cardID, _ := payloadMap["cardId"].(string)
-
-	if playerID == "" || cardID == "" {
-		return &adminError{message: "Missing playerId or cardId"}
+	if cmd.PlayerID == "" || cmd.CardID == "" {
+		return errors.New("missing playerId or cardId")
 	}
-
-	return h.giveCardAction.Execute(ctx, gameID, playerID, cardID)
+	return h.giveCardAction.Execute(ctx, gameID, cmd.PlayerID, cmd.CardID)
 }
 
-func (h *AdminCommandHandler) handleSetPhase(ctx context.Context, gameID string, payload interface{}) error {
-	payloadMap, ok := payload.(map[string]interface{})
-	if !ok {
-		return &adminError{message: "Invalid set-phase payload"}
+func (h *AdminCommandHandler) handleSetPhase(ctx context.Context, gameID string, payload any) error {
+	var cmd dto.SetPhaseAdminCommand
+	if err := decode(payload, &cmd); err != nil {
+		return err
 	}
-
-	phase, _ := payloadMap["phase"].(string)
-	if phase == "" {
-		return &adminError{message: "Missing phase"}
+	phase := shared.GamePhase(cmd.Phase)
+	if !shared.IsGamePhase(phase) {
+		return fmt.Errorf("unknown phase %q", cmd.Phase)
 	}
-
-	return h.setPhaseAction.Execute(ctx, gameID, shared.GamePhase(phase))
+	return h.setPhaseAction.Execute(ctx, gameID, phase)
 }
 
-func (h *AdminCommandHandler) handleSetResources(ctx context.Context, gameID string, payload interface{}) error {
-	payloadMap, ok := payload.(map[string]interface{})
-	if !ok {
-		return &adminError{message: "Invalid set-resources payload"}
+func (h *AdminCommandHandler) handleSetResources(ctx context.Context, gameID string, payload any) error {
+	var cmd dto.SetResourcesAdminCommand
+	if err := decode(payload, &cmd); err != nil {
+		return err
 	}
-
-	playerID, _ := payloadMap["playerId"].(string)
-	if playerID == "" {
-		return &adminError{message: "Missing playerId"}
+	if cmd.PlayerID == "" {
+		return errors.New("missing playerId")
 	}
-
-	resourcesData, ok := payloadMap["resources"].(map[string]interface{})
-	if !ok {
-		return &adminError{message: "Missing or invalid resources"}
-	}
-
-	resources := shared.Resources{
-		Credits:  getIntFromMap(resourcesData, "credits"),
-		Steel:    getIntFromMap(resourcesData, "steel"),
-		Titanium: getIntFromMap(resourcesData, "titanium"),
-		Plants:   getIntFromMap(resourcesData, "plants"),
-		Energy:   getIntFromMap(resourcesData, "energy"),
-		Heat:     getIntFromMap(resourcesData, "heat"),
-	}
-
-	return h.setResourcesAction.Execute(ctx, gameID, playerID, resources)
+	r := cmd.Resources
+	return h.setResourcesAction.Execute(ctx, gameID, cmd.PlayerID, shared.Resources{
+		Credits: r.Credits, Steel: r.Steel, Titanium: r.Titanium, Plants: r.Plants, Energy: r.Energy, Heat: r.Heat,
+	})
 }
 
-func (h *AdminCommandHandler) handleSetProduction(ctx context.Context, gameID string, payload interface{}) error {
-	payloadMap, ok := payload.(map[string]interface{})
-	if !ok {
-		return &adminError{message: "Invalid set-production payload"}
+func (h *AdminCommandHandler) handleSetProduction(ctx context.Context, gameID string, payload any) error {
+	var cmd dto.SetProductionAdminCommand
+	if err := decode(payload, &cmd); err != nil {
+		return err
 	}
-
-	playerID, _ := payloadMap["playerId"].(string)
-	if playerID == "" {
-		return &adminError{message: "Missing playerId"}
+	if cmd.PlayerID == "" {
+		return errors.New("missing playerId")
 	}
-
-	productionData, ok := payloadMap["production"].(map[string]interface{})
-	if !ok {
-		return &adminError{message: "Missing or invalid production"}
-	}
-
-	production := shared.Production{
-		Credits:  getIntFromMap(productionData, "credits"),
-		Steel:    getIntFromMap(productionData, "steel"),
-		Titanium: getIntFromMap(productionData, "titanium"),
-		Plants:   getIntFromMap(productionData, "plants"),
-		Energy:   getIntFromMap(productionData, "energy"),
-		Heat:     getIntFromMap(productionData, "heat"),
-	}
-
-	return h.setProductionAction.Execute(ctx, gameID, playerID, production)
+	p := cmd.Production
+	return h.setProductionAction.Execute(ctx, gameID, cmd.PlayerID, shared.Production{
+		Credits: p.Credits, Steel: p.Steel, Titanium: p.Titanium, Plants: p.Plants, Energy: p.Energy, Heat: p.Heat,
+	})
 }
 
-func (h *AdminCommandHandler) handleSetGlobalParams(ctx context.Context, gameID string, payload interface{}) error {
-	payloadMap, ok := payload.(map[string]interface{})
-	if !ok {
-		return &adminError{message: "Invalid set-global-params payload"}
+func (h *AdminCommandHandler) handleSetGlobalParams(ctx context.Context, gameID string, payload any) error {
+	var cmd dto.SetGlobalParamsAdminCommand
+	if err := decode(payload, &cmd); err != nil {
+		return err
 	}
-
-	globalParamsData, ok := payloadMap["globalParameters"].(map[string]interface{})
-	if !ok {
-		return &adminError{message: "Missing or invalid globalParameters"}
-	}
-
-	params := admin.SetGlobalParametersRequest{
-		Temperature: getIntFromMap(globalParamsData, "temperature"),
-		Oxygen:      getIntFromMap(globalParamsData, "oxygen"),
-		Oceans:      getIntFromMap(globalParamsData, "oceans"),
-		Venus:       getIntFromMap(globalParamsData, "venus"),
-	}
-
-	return h.setGlobalParametersAction.Execute(ctx, gameID, params)
+	g := cmd.GlobalParameters
+	return h.setGlobalParametersAction.Execute(ctx, gameID, admin.SetGlobalParametersRequest{
+		Temperature: g.Temperature, Oxygen: g.Oxygen, Oceans: g.Oceans, Venus: g.Venus,
+	})
 }
 
-func (h *AdminCommandHandler) handleSetCurrentTurn(ctx context.Context, gameID string, payload interface{}) error {
-	payloadMap, ok := payload.(map[string]interface{})
-	if !ok {
-		return &adminError{message: "Invalid set-current-turn payload"}
+func (h *AdminCommandHandler) handleSetCurrentTurn(ctx context.Context, gameID string, payload any) error {
+	var cmd struct {
+		PlayerID string `json:"playerId"`
 	}
-
-	playerID, _ := payloadMap["playerId"].(string)
-	if playerID == "" {
-		return &adminError{message: "Missing playerId"}
+	if err := decode(payload, &cmd); err != nil {
+		return err
 	}
-
-	return h.setCurrentTurnAction.Execute(ctx, gameID, playerID)
+	if cmd.PlayerID == "" {
+		return errors.New("missing playerId")
+	}
+	return h.setCurrentTurnAction.Execute(ctx, gameID, cmd.PlayerID)
 }
 
-func (h *AdminCommandHandler) handleSetCorporation(ctx context.Context, gameID string, payload interface{}) error {
-	payloadMap, ok := payload.(map[string]interface{})
-	if !ok {
-		return &adminError{message: "Invalid set-corporation payload"}
+func (h *AdminCommandHandler) handleSetCorporation(ctx context.Context, gameID string, payload any) error {
+	var cmd dto.SetCorporationAdminCommand
+	if err := decode(payload, &cmd); err != nil {
+		return err
 	}
-
-	playerID, _ := payloadMap["playerId"].(string)
-	corporationID, _ := payloadMap["corporationId"].(string)
-
-	if playerID == "" || corporationID == "" {
-		return &adminError{message: "Missing playerId or corporationId"}
+	if cmd.PlayerID == "" || cmd.CorporationID == "" {
+		return errors.New("missing playerId or corporationId")
 	}
-
-	return h.setCorporationAction.Execute(ctx, gameID, playerID, corporationID)
+	return h.setCorporationAction.Execute(ctx, gameID, cmd.PlayerID, cmd.CorporationID)
 }
 
-func (h *AdminCommandHandler) handleStartTileSelection(ctx context.Context, gameID string, payload interface{}) error {
-	payloadMap, ok := payload.(map[string]interface{})
-	if !ok {
-		return &adminError{message: "Invalid start-tile-selection payload"}
+func (h *AdminCommandHandler) handleStartTileSelection(ctx context.Context, gameID string, payload any) error {
+	var cmd dto.StartTileSelectionAdminCommand
+	if err := decode(payload, &cmd); err != nil {
+		return err
 	}
-
-	playerID, _ := payloadMap["playerId"].(string)
-	tileType, _ := payloadMap["tileType"].(string)
-
-	if playerID == "" || tileType == "" {
-		return &adminError{message: "Missing playerId or tileType"}
+	if cmd.PlayerID == "" || cmd.TileType == "" {
+		return errors.New("missing playerId or tileType")
 	}
-
-	return h.startTileSelectionAction.Execute(ctx, gameID, playerID, tileType)
+	return h.startTileSelectionAction.Execute(ctx, gameID, cmd.PlayerID, cmd.TileType)
 }
 
-func (h *AdminCommandHandler) handleSetTR(ctx context.Context, gameID string, payload interface{}) error {
-	payloadMap, ok := payload.(map[string]interface{})
-	if !ok {
-		return &adminError{message: "Invalid set-tr payload"}
+func (h *AdminCommandHandler) handleSetTR(ctx context.Context, gameID string, payload any) error {
+	var cmd dto.SetTRAdminCommand
+	if err := decode(payload, &cmd); err != nil {
+		return err
 	}
-
-	playerID, _ := payloadMap["playerId"].(string)
-	if playerID == "" {
-		return &adminError{message: "Missing playerId"}
+	if cmd.PlayerID == "" {
+		return errors.New("missing playerId")
 	}
-
-	terraformRating := getIntFromMap(payloadMap, "terraformRating")
-
-	return h.setTRAction.Execute(ctx, gameID, playerID, terraformRating)
+	return h.setTRAction.Execute(ctx, gameID, cmd.PlayerID, cmd.TerraformRating)
 }
 
-func (h *AdminCommandHandler) handleSetActionsRemaining(ctx context.Context, gameID string, payload interface{}) error {
-	payloadMap, ok := payload.(map[string]interface{})
-	if !ok {
-		return &adminError{message: "Invalid set-actions-remaining payload"}
+func (h *AdminCommandHandler) handleSetActionsRemaining(ctx context.Context, gameID string, payload any) error {
+	var cmd dto.SetActionsRemainingAdminCommand
+	if err := decode(payload, &cmd); err != nil {
+		return err
 	}
-
-	return h.setActionsRemainingAction.Execute(ctx, gameID, getIntFromMap(payloadMap, "actions"))
+	return h.setActionsRemainingAction.Execute(ctx, gameID, cmd.Actions)
 }
 
-// sendError sends an error message to the client
-func (h *AdminCommandHandler) sendError(connection *core.Connection, errorMessage string) {
-	_, gameID := connection.GetPlayer()
-	connection.Send <- dto.WebSocketMessage{
-		Type:   dto.MessageTypeError,
-		GameID: gameID,
-		Payload: dto.ErrorPayload{
-			Message: errorMessage,
-		},
+// decode reads a command payload into its typed form, rejecting values of the wrong
+// type instead of reading them as zero.
+func decode(payload any, out any) error {
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("invalid command payload: %w", err)
 	}
-}
-
-// adminError is a simple error type for admin command errors
-type adminError struct {
-	message string
-}
-
-func (e *adminError) Error() string {
-	return e.message
-}
-
-// getIntFromMap safely extracts an int from a map[string]interface{}
-func getIntFromMap(m map[string]interface{}, key string) int {
-	val, ok := m[key]
-	if !ok {
-		return 0
+	if err := json.Unmarshal(raw, out); err != nil {
+		return fmt.Errorf("invalid command payload: %w", err)
 	}
-
-	// Handle both float64 (JSON default) and int
-	switch v := val.(type) {
-	case float64:
-		return int(v)
-	case int:
-		return v
-	case json.Number:
-		i, _ := v.Int64()
-		return int(i)
-	default:
-		return 0
-	}
+	return nil
 }

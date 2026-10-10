@@ -125,8 +125,7 @@ func TestFixedVPConditions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			broadcaster := testutil.NewMockBroadcaster()
-			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 			players := testGame.GetAllPlayers()
 			p := players[0]
 
@@ -189,8 +188,7 @@ func TestPerTagVPConditions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			broadcaster := testutil.NewMockBroadcaster()
-			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 			players := testGame.GetAllPlayers()
 			p := players[0]
 
@@ -260,8 +258,7 @@ func TestPerTileVPConditions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			broadcaster := testutil.NewMockBroadcaster()
-			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 			players := testGame.GetAllPlayers()
 			p := players[0]
 
@@ -356,8 +353,7 @@ func TestMaxTriggerCap(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			broadcaster := testutil.NewMockBroadcaster()
-			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 			players := testGame.GetAllPlayers()
 			p := players[0]
 
@@ -393,8 +389,7 @@ func TestMaxTriggerCap(t *testing.T) {
 }
 
 func TestVPOrderingAddThenGetAll(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	players := testGame.GetAllPlayers()
 	p := players[0]
 
@@ -423,8 +418,7 @@ func TestVPOrderingAddThenGetAll(t *testing.T) {
 }
 
 func TestVPOrderingPrependThenAdd(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	players := testGame.GetAllPlayers()
 	p := players[0]
 
@@ -455,8 +449,7 @@ func TestVPOrderingPrependThenAdd(t *testing.T) {
 func TestMultipleGrantersTotalComputedVP(t *testing.T) {
 	selfCard := "self-card"
 
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	players := testGame.GetAllPlayers()
 	p := players[0]
 
@@ -522,8 +515,7 @@ func ptrTag(tag shared.CardTag) *shared.CardTag {
 }
 
 func TestIntegrationCardPlayedRegistersVPGranterAndResourceRecalculates(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	players := testGame.GetAllPlayers()
 	p := players[0]
 
@@ -549,8 +541,7 @@ func TestIntegrationCardPlayedRegistersVPGranterAndResourceRecalculates(t *testi
 }
 
 func TestIntegrationTagPlayedRecalculatesVP(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	players := testGame.GetAllPlayers()
 	p := players[0]
 
@@ -578,8 +569,7 @@ func TestIntegrationTagPlayedRecalculatesVP(t *testing.T) {
 }
 
 func TestIntegrationTilePlacedRecalculatesAllPlayersVP(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2)
 	players := testGame.GetAllPlayers()
 
 	player1 := players[0]
@@ -643,8 +633,7 @@ func TestPerAdjacentOceanTileVPGranter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			broadcaster := testutil.NewMockBroadcaster()
-			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 			players := testGame.GetAllPlayers()
 			p := players[0]
 
@@ -720,8 +709,7 @@ func TestCorporationVPConditions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			broadcaster := testutil.NewMockBroadcaster()
-			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 			players := testGame.GetAllPlayers()
 			p := players[0]
 
@@ -758,8 +746,7 @@ func TestCorporationVPConditions(t *testing.T) {
 func TestCorporationVPGranterIsPrepended(t *testing.T) {
 	selfCard := "self-card"
 
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	players := testGame.GetAllPlayers()
 	p := players[0]
 
@@ -804,8 +791,7 @@ func TestCorporationVPGranterIsPrepended(t *testing.T) {
 }
 
 func TestIntegrationCorporationSelectedRegistersVPGranterAndResourceRecalculates(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	players := testGame.GetAllPlayers()
 	p := players[0]
 
@@ -935,8 +921,7 @@ func TestPerResourceOnSelfCardVPConditions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			broadcaster := testutil.NewMockBroadcaster()
-			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 			players := testGame.GetAllPlayers()
 			p := players[0]
 
@@ -1001,8 +986,7 @@ func TestPerAdjacentToTileTypeVPGranter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			broadcaster := testutil.NewMockBroadcaster()
-			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 			players := testGame.GetAllPlayers()
 			p := players[0]
 

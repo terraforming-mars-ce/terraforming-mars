@@ -35,7 +35,7 @@ func (f *fakeBotLifecycle) PrepareBot(_, playerID string) {
 
 func lobbyWithToken(t *testing.T, players, maxPlayers int) (*gameAction.AddBotAction, *fakeBotLifecycle, string) {
 	t.Helper()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, players, testutil.NewMockBroadcaster())
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, players)
 	testGame.UpdateSettings(context.Background(), shared.GameSettings{
 		MaxPlayers:       maxPlayers,
 		ClaudeOAuthToken: "test-token",
@@ -46,7 +46,7 @@ func lobbyWithToken(t *testing.T, players, maxPlayers int) (*gameAction.AddBotAc
 }
 
 func TestAddBot_Success(t *testing.T) {
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, testutil.NewMockBroadcaster())
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	testGame.UpdateSettings(context.Background(), shared.GameSettings{
 		MaxPlayers:       4,
 		ClaudeOAuthToken: "test-token",
@@ -71,16 +71,16 @@ func TestAddBot_RejectsNonHost(t *testing.T) {
 	action, bots, gameID := lobbyWithToken(t, 2, 4)
 
 	_, err := action.Execute(context.Background(), gameID, "player-2")
-	testutil.AssertError(t, err, "Only the host may add bots")
+	testutil.AssertErrorContains(t, err, "only the host can add bots", "Only the host may add bots")
 	testutil.AssertEqual(t, 0, len(bots.prepared), "No bot should be prepared")
 }
 
 func TestAddBot_NoToken(t *testing.T) {
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, testutil.NewMockBroadcaster())
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	action := gameAction.NewAddBotAction(repo, testutil.CreateTestCardRegistry(), newFakeBotLifecycle(t), testutil.TestLogger())
 
 	_, err := action.Execute(context.Background(), testGame.ID(), "player-1")
-	testutil.AssertError(t, err, "Add bot should fail without a token")
+	testutil.AssertErrorContains(t, err, "a Claude token is required", "Add bot should fail without a token")
 }
 
 func TestAddBot_GameNotInLobby(t *testing.T) {
@@ -93,18 +93,18 @@ func TestAddBot_GameNotInLobby(t *testing.T) {
 	action := gameAction.NewAddBotAction(repo, cardRegistry, newFakeBotLifecycle(t), testutil.TestLogger())
 
 	_, err := action.Execute(context.Background(), g.ID(), g.HostPlayerID())
-	testutil.AssertError(t, err, "Add bot should fail when game is not in lobby")
+	testutil.AssertErrorContains(t, err, "game is not in lobby", "Add bot should fail when game is not in lobby")
 }
 
 func TestAddBot_GameFull(t *testing.T) {
 	action, _, gameID := lobbyWithToken(t, 4, 4)
 
 	_, err := action.Execute(context.Background(), gameID, "player-1")
-	testutil.AssertError(t, err, "Add bot should fail when game is full")
+	testutil.AssertErrorContains(t, err, "game is full", "Add bot should fail when game is full")
 }
 
 func TestAddBot_UniqueNames(t *testing.T) {
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, testutil.NewMockBroadcaster())
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	testGame.UpdateSettings(context.Background(), shared.GameSettings{
 		MaxPlayers:       5,
 		ClaudeOAuthToken: "test-token",

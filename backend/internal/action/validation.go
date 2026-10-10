@@ -190,3 +190,23 @@ func ValidateNoPendingSelections(
 	}
 	return nil
 }
+
+// ValidateSelection checks that every selected ID is one of the offered IDs and that no
+// ID is selected twice.
+func ValidateSelection(offered, selected []string, what string) error {
+	available := make(map[string]bool, len(offered))
+	for _, id := range offered {
+		available[id] = true
+	}
+	chosen := make(map[string]bool, len(selected))
+	for _, id := range selected {
+		if !available[id] {
+			return fmt.Errorf("%s %s is not available for selection", what, id)
+		}
+		if chosen[id] {
+			return fmt.Errorf("%s %s is selected more than once", what, id)
+		}
+		chosen[id] = true
+	}
+	return nil
+}

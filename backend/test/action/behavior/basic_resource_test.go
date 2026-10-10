@@ -146,9 +146,11 @@ func TestWaterImportFromEuropa_FailInsufficientPayment(t *testing.T) {
 		Resource: "titanium"}, TargetResource: shared.ResourceCredit,
 		Amount: 1}},
 	}
+	before := p.Resources().Get()
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment, nil, nil)
-	testutil.AssertError(t, err, "Should fail with insufficient payment")
+	testutil.AssertErrorContains(t, err, "insufficient credit payment", "Should fail with insufficient payment")
+	testutil.AssertEqual(t, before, p.Resources().Get(), "rejected payment spends nothing")
 }
 
 func TestWaterImportFromEuropa_FailSteelNotAllowed(t *testing.T) {
@@ -192,9 +194,11 @@ func TestWaterImportFromEuropa_FailSteelNotAllowed(t *testing.T) {
 		Resource: "steel"}, TargetResource: shared.ResourceCredit,
 		Amount: 3}},
 	}
+	before := p.Resources().Get()
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, nil, payment, nil, nil)
-	testutil.AssertError(t, err, "Should fail when using steel (not allowed)")
+	testutil.AssertErrorContains(t, err, "ineligible payment source", "Should fail when using steel (not allowed)")
+	testutil.AssertEqual(t, before, p.Resources().Get(), "rejected payment spends nothing")
 }
 
 func TestWaterImportFromEuropa_NoPaymentFallsBackToCredits(t *testing.T) {

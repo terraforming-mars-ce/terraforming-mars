@@ -15,7 +15,6 @@ import (
 	"openmars/internal/game/player"
 	"openmars/internal/game/shared"
 	"openmars/internal/game/standardproject"
-	"openmars/internal/logger"
 	"openmars/test/testutil"
 )
 
@@ -60,11 +59,6 @@ var allStandardProjects = []shared.StandardProject{
 // variant in the test).
 func setupStuckPlayer(t *testing.T) (*game.Game, *player.Player, gamecards.CardRegistry) {
 	t.Helper()
-
-	logLevel := "error"
-	if err := logger.Init(&logLevel); err != nil {
-		t.Fatalf("Failed to initialize logger: %v", err)
-	}
 
 	settings := shared.GameSettings{
 		MaxPlayers:      5,

@@ -5,7 +5,6 @@ import (
 
 	"context"
 	"testing"
-	"time"
 
 	"openmars/internal/action"
 	"openmars/internal/action/admin"
@@ -51,8 +50,7 @@ func newAridorEffect() shared.CardEffect {
 }
 
 func TestAridor_NewTagTriggersProductionIncrease(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -80,15 +78,12 @@ func TestAridor_NewTagTriggersProductionIncrease(t *testing.T) {
 	// Play a card with a new tag type
 	p.PlayedCards().AddCard(scienceCard.ID, scienceCard.Name, string(scienceCard.Type), []string{string(shared.TagScience)})
 
-	time.Sleep(50 * time.Millisecond)
-
 	testutil.AssertEqual(t, productionBefore+1, p.Resources().Production().Credits,
 		"Aridor should gain 1 credit production when a new tag type is played")
 }
 
 func TestAridor_DuplicateTagDoesNotTrigger(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -122,15 +117,12 @@ func TestAridor_DuplicateTagDoesNotTrigger(t *testing.T) {
 	// Play second science card — tag is not new
 	p.PlayedCards().AddCard(scienceCard2.ID, scienceCard2.Name, string(scienceCard2.Type), []string{string(shared.TagScience)})
 
-	time.Sleep(50 * time.Millisecond)
-
 	testutil.AssertEqual(t, productionBefore, p.Resources().Production().Credits,
 		"Aridor should NOT gain production when duplicate tag type is played")
 }
 
 func TestAridor_MultipleNewTagsOnOneCard(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -156,15 +148,12 @@ func TestAridor_MultipleNewTagsOnOneCard(t *testing.T) {
 	p.PlayedCards().AddCard(multiTagCard.ID, multiTagCard.Name, string(multiTagCard.Type),
 		[]string{string(shared.TagScience), string(shared.TagSpace)})
 
-	time.Sleep(50 * time.Millisecond)
-
 	testutil.AssertEqual(t, productionBefore+2, p.Resources().Production().Credits,
 		"Aridor should gain 2 credit production for 2 new tag types on one card")
 }
 
 func TestAridor_EventCardDoesNotTrigger(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -189,15 +178,12 @@ func TestAridor_EventCardDoesNotTrigger(t *testing.T) {
 	// Play an event card with a new tag — should NOT trigger
 	p.PlayedCards().AddCard(eventCard.ID, eventCard.Name, string(eventCard.Type), []string{string(shared.TagScience)})
 
-	time.Sleep(50 * time.Millisecond)
-
 	testutil.AssertEqual(t, productionBefore, p.Resources().Production().Credits,
 		"Aridor should NOT gain production from event card tags")
 }
 
 func TestAridor_WildTagDoesNotTrigger(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -221,8 +207,6 @@ func TestAridor_WildTagDoesNotTrigger(t *testing.T) {
 
 	// Play a card with a wild tag — should NOT trigger
 	p.PlayedCards().AddCard(wildCard.ID, wildCard.Name, string(wildCard.Type), []string{string(shared.TagWild)})
-
-	time.Sleep(50 * time.Millisecond)
 
 	testutil.AssertEqual(t, productionBefore, p.Resources().Production().Credits,
 		"Aridor should NOT gain production from wild tags")
@@ -254,8 +238,7 @@ func TestArklight_PassiveEffectByTag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			broadcaster := testutil.NewMockBroadcaster()
-			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+			testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 			logger := testutil.TestLogger()
 			ctx := context.Background()
 
@@ -317,8 +300,7 @@ func TestArklight_StartingResources(t *testing.T) {
 // =============================================================================
 
 func TestPolyphemos_NegativeDiscountOnCardBuying(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 
 	players := testGame.GetAllPlayers()
@@ -347,8 +329,7 @@ func TestPolyphemos_NegativeDiscountOnCardBuying(t *testing.T) {
 }
 
 func TestPolyphemos_DoesNotAffectCardPlayCost(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 
 	players := testGame.GetAllPlayers()
@@ -473,7 +454,8 @@ func TestPolyphemos_ProductionPhaseCardBuyCost_InsufficientCredits(t *testing.T)
 	// Buying 2 cards should fail (2 * 5 = 10 MC, only have 9)
 	action := confirmation.NewConfirmProductionCardsAction(repo, cardRegistry, nil, logger)
 	err = action.Execute(ctx, testGame.ID(), playerID, drawnCards[:2], false, shared.NativePayment(shared.ResourceCredit, len(drawnCards[:2])*5))
-	testutil.AssertError(t, err, "buying 2 cards at 5 MC each should fail with only 9 credits")
+	testutil.AssertErrorContains(t, err, "payment exceeds available source pool", "buying 2 cards at 5 MC each should fail with only 9 credits")
+	testutil.AssertEqual(t, 9, p.Resources().Get().Credits, "credits unchanged")
 }
 
 // =============================================================================
@@ -482,8 +464,7 @@ func TestPolyphemos_ProductionPhaseCardBuyCost_InsufficientCredits(t *testing.T)
 // =============================================================================
 
 func TestRimFreighters_ColonyTradeDiscount(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 
 	players := testGame.GetAllPlayers()
@@ -512,8 +493,7 @@ func TestRimFreighters_ColonyTradeDiscount(t *testing.T) {
 }
 
 func TestRimFreighters_DoesNotAffectCardPlayCost(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 
 	players := testGame.GetAllPlayers()
@@ -542,8 +522,7 @@ func TestRimFreighters_DoesNotAffectCardPlayCost(t *testing.T) {
 }
 
 func TestRimFreighters_DoesNotAffectCardBuyingCost(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 
 	players := testGame.GetAllPlayers()
@@ -569,8 +548,7 @@ func TestRimFreighters_DoesNotAffectCardBuyingCost(t *testing.T) {
 }
 
 func TestPartialResourceTradeDiscount_OnlyAffectsSpecifiedResources(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 
 	players := testGame.GetAllPlayers()
@@ -674,8 +652,6 @@ func TestPoseidon_GainProductionOnColonyPlacement(t *testing.T) {
 		PlayerID: playerID,
 		ColonyID: "luna",
 	})
-
-	time.Sleep(50 * time.Millisecond)
 
 	testutil.AssertEqual(t, creditProductionBefore+1, p.Resources().Production().Credits,
 		"Poseidon should gain 1 credit production on colony placement")
@@ -803,7 +779,7 @@ func TestStormcraft_ConvertHeatInsufficientResources(t *testing.T) {
 	convertAction := resconvaction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
 
 	err = convertAction.Execute(ctx, testGame.ID(), playerID, shared.Payment{Allocations: []shared.PaymentAllocation{{Source: shared.PaymentSource{Target: "self-card", Resource: shared.ResourceFloater, CardID: stormcraftID}, TargetResource: shared.ResourceHeat, Amount: 1}}})
-	testutil.AssertError(t, err, "Should fail with only 5 heat equivalent (need 8)")
+	testutil.AssertErrorContains(t, err, "insufficient heat payment", "Should fail with only 5 heat equivalent (need 8)")
 	testutil.AssertEqual(t, 1, p.Resources().GetCardStorage(stormcraftID), "failed payment preserves floaters")
 	testutil.AssertEqual(t, 3, p.Resources().Get().Heat, "failed payment preserves heat")
 }
@@ -864,8 +840,7 @@ func TestStormcraft_StateCalculatorShowsUnaffordableWithoutEnoughFloaters(t *tes
 }
 
 func TestPoseidon_ForcedColonyDoesNotBlockInitAdvance_Repro568(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	cardRegistry := testutil.CreateTestCardRegistry()
 	ctx := context.Background()
@@ -958,8 +933,7 @@ func TestPoseidon_ForcedColonyDoesNotBlockInitAdvance_Repro568(t *testing.T) {
 }
 
 func TestPoseidon_ForcedColonyInitAdvance_FourPlayerPrelude_Repro568(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 4, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 4)
 	logger := testutil.TestLogger()
 	cardRegistry := testutil.CreateTestCardRegistry()
 	ctx := context.Background()
@@ -1068,7 +1042,7 @@ func TestStormcraft_PaysHeatActionWithoutPayingCreditCosts(t *testing.T) {
 	creditCard := testutil.GetCardByName("Imported GHG")
 	p.Hand().AddCard(creditCard.ID)
 	bad := shared.Payment{Allocations: []shared.PaymentAllocation{{Source: source, TargetResource: shared.ResourceCredit, Amount: 4}}}
-	testutil.AssertError(t, cardAction.NewPlayCardAction(repo, registry, nil, log).Execute(ctx, g.ID(), id, creditCard.ID, bad, nil, nil, nil, nil, nil), "floaters cannot pay credits")
+	testutil.AssertErrorContains(t, cardAction.NewPlayCardAction(repo, registry, nil, log).Execute(ctx, g.ID(), id, creditCard.ID, bad, nil, nil, nil, nil, nil), "ineligible payment source for credit", "floaters cannot pay credits")
 	testutil.AssertEqual(t, 4, p.Resources().GetCardStorage("CC5"), "rejected credit payment preserves floaters")
 	card := testutil.GetCardByName("Caretaker Contract")
 	p.PlayedCards().AddCard(card.ID, card.Name, string(card.Type), nil)
@@ -1113,10 +1087,10 @@ func TestAridor_AddsUnownedTileAndActivatesOnResourceHolder(t *testing.T) {
 	view := dto.ToGameDto(g, registry, id, colonies)
 	testutil.AssertEqual(t, len(defs)-1, len(view.CurrentPlayer.PendingColonySelection.TileOptions), "unused tile previews sent")
 	skip := turnAction.NewSkipActionAction(repo, nil, testutil.TestLogger())
-	testutil.AssertError(t, skip.Execute(ctx, g.ID(), id), "cannot pass first action")
+	testutil.AssertErrorContains(t, skip.Execute(ctx, g.ID(), id), "corporation first action must finish first", "cannot pass first action")
 	confirm := confirmation.NewConfirmColonyPlacementAction(repo, registry, colonies, testutil.TestLogger())
-	testutil.AssertError(t, confirm.Execute(ctx, g.ID(), other, "titan"), "other player cannot confirm")
-	testutil.AssertError(t, confirm.Execute(ctx, g.ID(), id, "luna"), "existing tile rejected")
+	testutil.AssertErrorContains(t, confirm.Execute(ctx, g.ID(), other, "titan"), "not your turn", "other player cannot confirm")
+	testutil.AssertErrorContains(t, confirm.Execute(ctx, g.ID(), id, "luna"), "colony luna is not available for selection", "existing tile rejected")
 	before := p.Resources().Get()
 	testutil.AssertNoError(t, confirm.Execute(ctx, g.ID(), id, "titan"), "add Titan")
 	titan := g.Colonies().GetState("titan")
@@ -1126,7 +1100,7 @@ func TestAridor_AddsUnownedTileAndActivatesOnResourceHolder(t *testing.T) {
 	testutil.AssertEqual(t, 0, eventsSeen, "adding tile does not trigger colony building")
 	testutil.AssertEqual(t, before, p.Resources().Get(), "no placement reward")
 	testutil.AssertEqual(t, 1, g.CurrentTurn().ActionsRemaining(), "one action spent")
-	testutil.AssertError(t, confirm.Execute(ctx, g.ID(), id, "titan"), "duplicate confirmation rejected")
+	testutil.AssertErrorContains(t, confirm.Execute(ctx, g.ID(), id, "titan"), "no pending colony selection", "duplicate confirmation rejected")
 	testutil.AssertEqual(t, 2, len(g.Colonies().States()), "no duplicate tile")
 	p.Hand().AddCard("213")
 	p.Resources().Set(shared.Resources{Credits: 100})

@@ -1,7 +1,6 @@
 package changelog_test
 
 import (
-	"strings"
 	"testing"
 
 	"openmars/internal/changelog"
@@ -56,6 +55,6 @@ func TestReleaseNotes_RejectsInvalidNotes(t *testing.T) {
 	writeFile(t, dir, "v1", changelog.Player.FileName, "## Added\n- A.\n")
 
 	_, err := changelog.ReleaseNotes(dir, "v1", imageURL)
-	testutil.AssertError(t, err, "invalid player notes")
-	testutil.AssertTrue(t, strings.Contains(err.Error(), changelog.Player.FileName), "error names the player file")
+	testutil.AssertErrorContains(t, err, changelog.Player.FileName, "error names the player file")
+	testutil.AssertErrorContains(t, err, `unknown section "Added"`, "player notes reject developer sections")
 }

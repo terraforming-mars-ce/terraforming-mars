@@ -19,69 +19,30 @@ type GameUpdatedPayload struct {
 	Game GameDto `json:"game"`
 }
 
-// PlayerConnectedPayload contains data about a newly connected player
+// PlayerConnectedPayload confirms which player a connection now acts as.
 type PlayerConnectedPayload struct {
-	PlayerID   string  `json:"playerId"`
-	PlayerName string  `json:"playerName"`
-	Game       GameDto `json:"game"`
+	PlayerID   string `json:"playerId"`
+	PlayerName string `json:"playerName"`
 }
 
-// ErrorPayload contains error information
+// ErrorPayload tells a client that one of its requests failed. It is only ever sent to
+// the client that made the request.
 type ErrorPayload struct {
 	Message string `json:"message"`
 	Code    string `json:"code,omitempty"`
-}
-
-// PlayCardErrorPayload identifies the rejected card play for client presentation recovery.
-type PlayCardErrorPayload struct {
-	Action string `json:"action" tstype:"'play-card'"`
-	CardID string `json:"cardId"`
-	Error  string `json:"error"`
-}
-
-// FullStatePayload contains the complete game state
-type FullStatePayload struct {
-	Game     GameDto `json:"game"`
-	PlayerID string  `json:"playerId"`
-}
-
-// PlayerReconnectedPayload contains data about a reconnected player
-type PlayerReconnectedPayload struct {
-	PlayerID   string  `json:"playerId"`
-	PlayerName string  `json:"playerName"`
-	Game       GameDto `json:"game"`
-}
-
-// PlayerDisconnectedPayload contains data about a disconnected player (for internal handler use)
-type PlayerDisconnectedPayload struct {
-	PlayerID string `json:"playerId"`
-	GameID   string `json:"gameId"`
-}
-
-// PlayerProductionData contains production data for a single player
-type PlayerProductionData struct {
-	PlayerID   string        `json:"playerId"`
-	PlayerName string        `json:"playerName"`
-	Production ProductionDto `json:"production"`
-}
-
-// ProductionPhaseStartedPayload contains data when production phase begins
-type ProductionPhaseStartedPayload struct {
-	Generation  int                    `json:"generation"`
-	PlayersData []PlayerProductionData `json:"playersData"`
-	Game        GameDto                `json:"game"`
+	// RequestType is the client message type that failed.
+	RequestType MessageType `json:"requestType,omitempty"`
+	// CardID, ResolutionID and SelectionID identify what the failed request was about,
+	// so the client can restore that part of its UI.
+	CardID       string `json:"cardId,omitempty"`
+	ResolutionID string `json:"resolutionId,omitempty"`
+	SelectionID  string `json:"selectionId,omitempty"`
 }
 
 // LogUpdatePayload contains game log entries sent via WebSocket
 type LogUpdatePayload struct {
 	Logs      []StateDiffDto `json:"logs"`
 	IsHistory bool           `json:"isHistory"`
-}
-
-// ConfirmStartingCardSelectionMessage represents confirm starting card selection message
-type ConfirmStartingCardSelectionMessage struct {
-	GameID   string `json:"gameId"`
-	PlayerID string `json:"playerId"`
 }
 
 // PlayerTakeoverPayload contains data for player takeover requests
@@ -96,16 +57,9 @@ type SpectatorConnectPayload struct {
 	GameID        string `json:"gameId"`
 }
 
-// SpectatorConnectedPayload contains data about a newly connected spectator.
+// SpectatorConnectedPayload confirms which spectator a connection now acts as.
 type SpectatorConnectedPayload struct {
-	SpectatorID string  `json:"spectatorId"`
-	Game        GameDto `json:"game"`
-}
-
-// SpectatorDisconnectedPayload contains data about a disconnected spectator.
-type SpectatorDisconnectedPayload struct {
 	SpectatorID string `json:"spectatorId"`
-	GameID      string `json:"gameId"`
 }
 
 // ChatMessagePayload contains a chat message from a client.

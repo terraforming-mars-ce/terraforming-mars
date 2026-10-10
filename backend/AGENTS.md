@@ -96,8 +96,9 @@ The backend follows clean architecture principles with strict separation of conc
 ```
 backend/
 ├── cmd/
-│   └── server/            # Main server with dependency injection
+│   └── server/            # Reads the environment and serves internal/app
 ├── internal/
+│   ├── app/               # Composition root: builds every registry, action and transport
 │   ├── action/            # Business logic actions (ONLY place for state mutation)
 │   ├── cards/             # Card registry and loader
 │   ├── delivery/          # Presentation layer
@@ -132,11 +133,10 @@ just backend run          # Build and run without hot reload
 ### Testing
 
 ```bash
-just backend test                                   # All tests (./test/...)
+just backend test                                   # All tests (./test/...), race detector, random order
 just backend test -v -run TestKick ./test/action/... # Args replace the default package pattern
 just backend test -json ./test/...                  # JSON output for parsing
 just backend coverage                               # Coverage report (coverage.html)
-just backend test-race                              # Race detector
 ```
 
 Inside `backend/`, drop the `backend` prefix (`just test`).
@@ -182,9 +182,12 @@ type Player struct {
    - Return explicit result type or error
 
 2. **Create WebSocket handler** (if needed) in `internal/delivery/websocket/handler/`:
-   - Parse incoming WebSocket message
-   - Call the action's Execute() method
-   - SessionManager handles broadcasting
+   - Read who is acting from `connection.Identity()`, never from the payload
+   - Parse the payload and call the action's Execute() method
+   - Report failures with `connection.SendError(message.Type, ...)`; it reaches only the sender
+   - Call `broadcaster.BroadcastGameState` on success
+   - Register it in `internal/delivery/websocket/registry.go` and add its rejection cases to
+     `test/e2e/contract_test.go`; a test fails for any registered type without them
 
 3. **Create HTTP handler** (if needed) in `internal/delivery/http/`:
    - Parse HTTP request
@@ -269,11 +272,9 @@ productionPhase := player.ProductionPhase() // This method doesn't exist
 ### WebSocket Message Flow
 
 ```
-Client → WebSocket Connection → Hub.HandleMessage()
+Client → Connection.readPump → Hub (one goroutine for every game)
                                        ↓
-                                 Manager.RouteMessage()
-                                       ↓
-                             WebSocket Handler.Handle()
+                          MessageHandler.HandleMessage()
                                        ↓
                                   Action.Execute()
                                        ↓

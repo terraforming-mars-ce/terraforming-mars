@@ -12,8 +12,7 @@ import (
 
 func TestPlayCardAction_DiscountEffectRegistered(t *testing.T) {
 	// Setup: Create game with player who has Space Station in hand
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -65,8 +64,7 @@ func TestPlayCardAction_DiscountEffectRegistered(t *testing.T) {
 
 func TestPlayCardAction_ChoiceCardPlantProduction(t *testing.T) {
 	// Setup: Create game with player who has Artificial Photosynthesis in hand
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -111,8 +109,7 @@ func TestPlayCardAction_ChoiceCardPlantProduction(t *testing.T) {
 
 func TestPlayCardAction_ChoiceCardEnergyProduction(t *testing.T) {
 	// Setup: Create game with player who has Artificial Photosynthesis in hand
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -157,8 +154,7 @@ func TestPlayCardAction_ChoiceCardEnergyProduction(t *testing.T) {
 
 func TestPlayCardAction_DiscountCalculatedOnDemand(t *testing.T) {
 	// Setup: Create game with Space Station already played (effect registered)
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -213,8 +209,7 @@ func TestPlayCardAction_DiscountCalculatedOnDemand(t *testing.T) {
 // Bug fix: Previously, payment was validated against base cost even with discounts active
 func TestPlayCardAction_WithSingleDiscount(t *testing.T) {
 	// Setup: Create game with player who has Teractor's Earth discount
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -277,8 +272,7 @@ func TestPlayCardAction_WithSingleDiscount(t *testing.T) {
 // TestPlayCardAction_WithDoubleDiscount tests that multiple discounts stack correctly
 func TestPlayCardAction_WithDoubleDiscount(t *testing.T) {
 	// Setup: Create game with player
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -360,8 +354,7 @@ func TestPlayCardAction_WithDoubleDiscount(t *testing.T) {
 // TestPlayCardAction_DiscountDoesNotApplyToNonMatchingCard tests that discounts only apply to matching tags
 func TestPlayCardAction_DiscountDoesNotApplyToNonMatchingCard(t *testing.T) {
 	// Setup: Create game with player who has Teractor's Earth discount
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -414,6 +407,6 @@ func TestPlayCardAction_DiscountDoesNotApplyToNonMatchingCard(t *testing.T) {
 	err = playCardAction.Execute(ctx, testGame.ID(), p.ID(), testutil.CardID("Arctic Algae"), payment, nil, nil, nil, nil, nil)
 
 	// Should FAIL because discount doesn't apply and player doesn't have enough credits
-	testutil.AssertError(t, err, "Should NOT be able to play Arctic Algae with only 9 credits (no discount applies)")
+	testutil.AssertErrorContains(t, err, "insufficient credit payment", "Should NOT be able to play Arctic Algae with only 9 credits (no discount applies)")
 	testutil.AssertTrue(t, p.Hand().HasCard(testutil.CardID("Arctic Algae")), "Arctic Algae should still be in hand")
 }

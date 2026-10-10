@@ -52,8 +52,7 @@ func createChoiceRequirementsTestCard() gamecards.Card {
 
 func TestChoiceRequirements_Choice0AlwaysAvailable(t *testing.T) {
 	// Setup: Create game with player who has the test card
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	additionalCards := []gamecards.Card{createChoiceRequirementsTestCard()}
 	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards(additionalCards)
 	logger := testutil.TestLogger()
@@ -88,8 +87,7 @@ func TestChoiceRequirements_Choice0AlwaysAvailable(t *testing.T) {
 
 func TestChoiceRequirements_Choice1RejectedWithoutEnoughTags(t *testing.T) {
 	// Setup: Create game with player who has the test card
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	additionalCards := []gamecards.Card{createChoiceRequirementsTestCard()}
 	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards(additionalCards)
 	logger := testutil.TestLogger()
@@ -116,7 +114,7 @@ func TestChoiceRequirements_Choice1RejectedWithoutEnoughTags(t *testing.T) {
 	payment := shared.NativePayment(shared.ResourceCredit, 10)
 	choiceIndex := 1
 	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Choice 1 should fail without venus tags")
+	testutil.AssertErrorContains(t, err, "choice 1 requirements not met: tag requirements", "Choice 1 should fail without venus tags")
 
 	// Card should still be in hand since the play failed
 	testutil.AssertTrue(t, player.Hand().HasCard("card-choice-req-test"), "Card should remain in hand after failed play")
@@ -124,8 +122,7 @@ func TestChoiceRequirements_Choice1RejectedWithoutEnoughTags(t *testing.T) {
 
 func TestChoiceRequirements_Choice1SucceedsWithEnoughTags(t *testing.T) {
 	// Setup: Create game with player who has the test card AND 3+ venus tags
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 
 	// Create 3 venus-tagged cards for the player to have played
 	venusCard1 := gamecards.Card{
@@ -180,8 +177,7 @@ func TestChoiceRequirements_Choice1SucceedsWithEnoughTags(t *testing.T) {
 
 func TestChoiceRequirements_Choice0DrawsCard(t *testing.T) {
 	// Verify that choosing option 0 (draw 1 card) actually adds a card to the player's hand
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	additionalCards := []gamecards.Card{createChoiceRequirementsTestCard()}
 	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards(additionalCards)
 	logger := testutil.TestLogger()
@@ -219,8 +215,7 @@ func TestChoiceRequirements_Choice0DrawsCard(t *testing.T) {
 
 func TestChoiceRequirements_Choice1DrawsThreeCards(t *testing.T) {
 	// Verify that choosing option 1 (draw 3 cards) actually adds 3 cards to hand
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 
 	venusCard1 := gamecards.Card{
 		ID: "venus-1", Name: "Venus 1", Type: gamecards.CardTypeAutomated,
@@ -277,8 +272,7 @@ func TestChoiceRequirements_Choice1DrawsThreeCards(t *testing.T) {
 
 func TestChoiceRequirements_Choice1FailsWithTwoTags(t *testing.T) {
 	// Setup: Same as above but with only 2 venus tags (below the 3 minimum)
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 
 	venusCard1 := gamecards.Card{
 		ID: "venus-1", Name: "Venus 1", Type: gamecards.CardTypeAutomated,
@@ -319,5 +313,5 @@ func TestChoiceRequirements_Choice1FailsWithTwoTags(t *testing.T) {
 	payment := shared.NativePayment(shared.ResourceCredit, 10)
 	choiceIndex := 1
 	err = playCardAction.Execute(ctx, testGame.ID(), player.ID(), "card-choice-req-test", payment, &choiceIndex, nil, nil, nil, nil)
-	testutil.AssertError(t, err, "Choice 1 should fail with only 2 venus tags")
+	testutil.AssertErrorContains(t, err, "choice 1 requirements not met: tag requirements", "Choice 1 should fail with only 2 venus tags")
 }

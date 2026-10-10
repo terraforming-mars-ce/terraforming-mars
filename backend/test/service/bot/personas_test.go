@@ -22,7 +22,7 @@ func TestPersonaCatalog_RejectsDuplicateNames(t *testing.T) {
 		{ID: "a", Voice: "x", Names: []string{"HAL"}},
 		{ID: "b", Voice: "y", Names: []string{"HAL"}},
 	})
-	testutil.AssertError(t, err, "a name may belong to one persona only")
+	testutil.AssertErrorContains(t, err, "used by two personas", "a name may belong to one persona only")
 }
 
 func TestPersonaCatalog_AssignIdentityIsDeterministicAndAvoidsTakenNames(t *testing.T) {

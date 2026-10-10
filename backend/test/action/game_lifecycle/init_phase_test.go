@@ -236,7 +236,7 @@ func TestInitPhase_RejectConfirmWrongPhase(t *testing.T) {
 
 	// Game is still in starting_selection
 	err := confirmAction.Execute(ctx, testGame.ID(), testGame.HostPlayerID())
-	testutil.AssertError(t, err, "Should reject confirm when not in init phase")
+	testutil.AssertErrorContains(t, err, "game not in init apply phase", "Should reject confirm when not in init phase")
 }
 
 func TestInitPhase_RejectConfirmWhenNotWaiting(t *testing.T) {
@@ -252,14 +252,13 @@ func TestInitPhase_RejectConfirmWhenNotWaiting(t *testing.T) {
 	testutil.AssertNoError(t, testGame.SetInitPhaseWaitingForConfirm(ctx, false), "clear waiting flag")
 
 	err := confirmAction.Execute(ctx, testGame.ID(), testGame.HostPlayerID())
-	testutil.AssertError(t, err, "Should reject confirm when not waiting")
+	testutil.AssertErrorContains(t, err, "init phase not waiting for confirmation", "Should reject confirm when not waiting")
 }
 
 func TestInitPhase_LastPlayerForcedTilePlacement(t *testing.T) {
 	// Set up game where player 2 (last in turn order) has Tharsis Republic (B08)
 	// which requires a forced city tile placement
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	logger := testutil.TestLogger()
 	cardRegistry := testutil.CreateTestCardRegistry()
 	stateRepo := game.NewInMemoryGameStateRepository()
@@ -465,7 +464,7 @@ func TestInitPhase_ShowcasePreludeTileDocksAndBlocksAdvance(t *testing.T) {
 	testutil.AssertTrue(t, view.HasPendingSelection, "ocean placement is pending")
 	testutil.AssertEqual(t, "P14", view.PendingSourceCardID, "pending choice comes from Great Aquifer")
 
-	testutil.AssertError(t, confirmAction.Execute(ctx, testGame.ID(), testGame.HostPlayerID()), "confirm rejected while placing")
+	testutil.AssertErrorContains(t, confirmAction.Execute(ctx, testGame.ID(), testGame.HostPlayerID()), "current player has pending selection", "confirm rejected while placing")
 
 	selectTile := tileAction.NewSelectTileAction(gameRepoWithGame(t, testGame), cardRegistry, stateRepo, logger)
 	for i := 0; i < 2; i++ {
@@ -510,7 +509,7 @@ func TestInitPhase_PreludeTilesDoNotOverwriteEachOther(t *testing.T) {
 	city := testGame.GetPendingTileSelection(playerID1)
 	testutil.AssertTrue(t, city != nil, "city placement pending")
 	testutil.AssertEqual(t, "city", city.TileType, "city tile first")
-	testutil.AssertError(t, confirmAction.Execute(ctx, testGame.ID(), testGame.HostPlayerID()), "Great Aquifer waits for the city")
+	testutil.AssertErrorContains(t, confirmAction.Execute(ctx, testGame.ID(), testGame.HostPlayerID()), "current player has pending selection", "Great Aquifer waits for the city")
 
 	selectTile := tileAction.NewSelectTileAction(gameRepoWithGame(t, testGame), cardRegistry, stateRepo, logger)
 	_, err := selectTile.Execute(ctx, testGame.ID(), playerID1, city.AvailableHexes[0])
@@ -550,7 +549,7 @@ func TestInitPhase_PreludeCardSelectionBlocksNextPrelude(t *testing.T) {
 
 	view := assertInitStage(t, testGame, playerID2, playerID1, dto.InitPhaseStageApplied)
 	testutil.AssertTrue(t, view.HasPendingSelection, "selection reported as pending")
-	testutil.AssertError(t, confirmAction.Execute(ctx, testGame.ID(), testGame.HostPlayerID()), "next prelude waits")
+	testutil.AssertErrorContains(t, confirmAction.Execute(ctx, testGame.ID(), testGame.HostPlayerID()), "current player has pending selection", "next prelude waits")
 
 	confirmDraw := confirmationAction.NewConfirmCardDrawAction(gameRepoWithGame(t, testGame), cardRegistry, logger)
 	err := confirmDraw.Execute(ctx, testGame.ID(), playerID1, selection.AvailableCards[:selection.FreeTakeCount], []string{}, shared.Payment{})
@@ -571,7 +570,7 @@ func TestInitPhase_OnlyHostAdvancesUnlessHostDisconnected(t *testing.T) {
 		guestID = playerID1
 	}
 
-	testutil.AssertError(t, confirmAction.Execute(ctx, testGame.ID(), guestID), "guest cannot advance while host is connected")
+	testutil.AssertErrorContains(t, confirmAction.Execute(ctx, testGame.ID(), guestID), "only the host can advance the showcase", "guest cannot advance while host is connected")
 	testutil.AssertFalse(t, testGame.GetDeferredStartingChoices(testGame.TurnOrder()[0]).CorpApplied, "nothing applied")
 
 	host, err := testGame.GetPlayer(hostID)

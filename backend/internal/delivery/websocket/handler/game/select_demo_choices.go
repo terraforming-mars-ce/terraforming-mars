@@ -37,22 +37,22 @@ func (h *SelectDemoChoicesHandler) HandleMessage(ctx context.Context, connection
 
 	log.Debug("Processing select demo choices request")
 
-	if connection.GameID == "" || connection.PlayerID == "" {
-		h.sendError(connection, "Not connected to a game")
+	if connection.GameID() == "" || connection.PlayerID() == "" {
+		connection.SendError(message.Type, "Not connected to a game")
 		return
 	}
 
 	payloadBytes, err := json.Marshal(message.Payload)
 	if err != nil {
 		log.Error("Failed to marshal payload", slog.Any("error", err))
-		h.sendError(connection, "Invalid payload format")
+		connection.SendError(message.Type, "Invalid payload format")
 		return
 	}
 
 	var request dto.SelectDemoChoicesRequest
 	if err := json.Unmarshal(payloadBytes, &request); err != nil {
 		log.Error("Failed to unmarshal payload", slog.Any("error", err))
-		h.sendError(connection, "Invalid payload format")
+		connection.SendError(message.Type, "Invalid payload format")
 		return
 	}
 
@@ -87,32 +87,13 @@ func (h *SelectDemoChoicesHandler) HandleMessage(ctx context.Context, connection
 		}
 	}
 
-	err = h.action.Execute(ctx, connection.GameID, connection.PlayerID, &choices)
+	err = h.action.Execute(ctx, connection.GameID(), connection.PlayerID(), &choices)
 	if err != nil {
 		log.Error("Failed to execute select demo choices action", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
-	h.broadcaster.BroadcastGameState(connection.GameID, nil)
+	h.broadcaster.BroadcastGameState(connection.GameID(), nil)
 
-	response := dto.WebSocketMessage{
-		Type:   "action-success",
-		GameID: connection.GameID,
-		Payload: map[string]interface{}{
-			"action":  "select-demo-choices",
-			"success": true,
-		},
-	}
-
-	connection.Send <- response
-}
-
-func (h *SelectDemoChoicesHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	}
 }

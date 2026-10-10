@@ -12,7 +12,7 @@ import (
 
 func setupTurnGame(t *testing.T) (*game.Game, *adminAction.SetCurrentTurnAction, *adminAction.SetActionsRemainingAction) {
 	t.Helper()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 3, testutil.NewMockBroadcaster())
+	g, repo := testutil.CreateTestGameWithPlayers(t, 3)
 	testutil.StartTestGame(t, g)
 	logger := testutil.TestLogger()
 	return g, adminAction.NewSetCurrentTurnAction(repo, logger), adminAction.NewSetActionsRemainingAction(repo, logger)
@@ -41,7 +41,7 @@ func TestAdminMoveTurn_RejectsPassedPlayer(t *testing.T) {
 	passed, _ := g.GetPlayer(order[1])
 	passed.SetPassed(true)
 
-	testutil.AssertError(t, moveTurn.Execute(ctx, g.ID(), order[1]), "passed player cannot get the turn")
+	testutil.AssertErrorContains(t, moveTurn.Execute(ctx, g.ID(), order[1]), "has passed or left", "passed player cannot get the turn")
 	testutil.AssertEqual(t, order[0], g.CurrentTurn().PlayerID(), "turn unchanged")
 }
 
@@ -67,6 +67,6 @@ func TestAdminSetActionsRemaining(t *testing.T) {
 	testutil.AssertEqual(t, 5, g.CurrentTurn().ActionsRemaining(), "remaining updated")
 	testutil.AssertEqual(t, 5, g.CurrentTurn().TotalActions(), "total updated")
 
-	testutil.AssertError(t, setActions.Execute(ctx, g.ID(), 0), "zero rejected")
+	testutil.AssertErrorContains(t, setActions.Execute(ctx, g.ID(), 0), "actions must be at least 1", "zero rejected")
 	testutil.AssertEqual(t, 5, g.CurrentTurn().ActionsRemaining(), "unchanged after rejection")
 }

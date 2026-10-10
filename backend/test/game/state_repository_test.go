@@ -10,8 +10,7 @@ import (
 )
 
 func TestStateRepository_WriteInitialState(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2)
 	repo := game.NewInMemoryGameStateRepository()
 
 	diff, err := repo.Write(context.Background(), testGame.ID(), testGame, "Game Setup", shared.SourceTypeInitial, "", "Game created")
@@ -35,8 +34,7 @@ func TestStateRepository_WriteInitialState(t *testing.T) {
 }
 
 func TestStateRepository_WriteIncrementalChanges(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	repo := game.NewInMemoryGameStateRepository()
 
 	_, err := repo.Write(context.Background(), testGame.ID(), testGame, "Game Setup", shared.SourceTypeInitial, "", "Game created")
@@ -72,8 +70,7 @@ func TestStateRepository_WriteIncrementalChanges(t *testing.T) {
 }
 
 func TestStateRepository_GetDiff(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	repo := game.NewInMemoryGameStateRepository()
 
 	_, err := repo.Write(context.Background(), testGame.ID(), testGame, "Game Setup", shared.SourceTypeInitial, "", "Game created")
@@ -129,8 +126,7 @@ func TestStateRepository_WriteNilGameReturnsError(t *testing.T) {
 }
 
 func TestStateRepository_WriteContextCancelled(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	repo := game.NewInMemoryGameStateRepository()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -143,8 +139,7 @@ func TestStateRepository_WriteContextCancelled(t *testing.T) {
 }
 
 func TestStateRepository_GlobalParameterChanges(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	repo := game.NewInMemoryGameStateRepository()
 	players := testGame.GetAllPlayers()
 	player := players[0]
@@ -171,8 +166,7 @@ func TestStateRepository_GlobalParameterChanges(t *testing.T) {
 }
 
 func TestStateRepository_PhaseChange(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	repo := game.NewInMemoryGameStateRepository()
 
 	_, err := repo.Write(context.Background(), testGame.ID(), testGame, "Game Setup", shared.SourceTypeInitial, "", "Game created")
@@ -197,8 +191,7 @@ func TestStateRepository_PhaseChange(t *testing.T) {
 }
 
 func TestStateRepository_NoChangesProducesEmptyDiff(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	repo := game.NewInMemoryGameStateRepository()
 
 	_, err := repo.Write(context.Background(), testGame.ID(), testGame, "Game Setup", shared.SourceTypeInitial, "", "Game created")

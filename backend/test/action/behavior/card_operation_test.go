@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"openmars/internal/action"
 	cardAction "openmars/internal/action/card"
@@ -23,8 +22,7 @@ import (
 // "Effect: When you play a science tag, including this, you may discard a card from hand to draw a card."
 
 func TestMarsUniversity_CreatesDiscardSelectionOnScienceTag(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -90,8 +88,6 @@ func TestMarsUniversity_CreatesDiscardSelectionOnScienceTag(t *testing.T) {
 		Tag:      "science",
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	// Should have a pending card discard selection
 	selection := owner.Selection().GetPendingBehaviorResolutions()[0]
 	testutil.AssertTrue(t, selection != nil, "Should have a pending discard selection after science tag event")
@@ -106,8 +102,7 @@ func TestMarsUniversity_CreatesDiscardSelectionOnScienceTag(t *testing.T) {
 }
 
 func TestMarsUniversity_RetainsDecisionWhenNoCardsInHand(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -163,14 +158,11 @@ func TestMarsUniversity_RetainsDecisionWhenNoCardsInHand(t *testing.T) {
 		Tag:      "science",
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	testutil.AssertEqual(t, 1, len(owner.Selection().GetPendingBehaviorResolutions()), "Keep the optional decision: another effect may draw cards first")
 }
 
 func TestMarsUniversity_DoesNotTriggerOnNonScienceTag(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -226,8 +218,6 @@ func TestMarsUniversity_DoesNotTriggerOnNonScienceTag(t *testing.T) {
 		Tag:      "building",
 	})
 
-	time.Sleep(20 * time.Millisecond)
-
 	// Should NOT trigger for building tag
 	testutil.AssertTrue(t, len(owner.Selection().GetPendingBehaviorResolutions()) == 0,
 		"Mars University should not trigger on non-science tags")
@@ -236,8 +226,7 @@ func TestMarsUniversity_DoesNotTriggerOnNonScienceTag(t *testing.T) {
 // --- ConfirmCardDiscardAction Tests ---
 
 func TestConfirmCardDiscard_DiscardAndDraw(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -293,8 +282,7 @@ func TestConfirmCardDiscard_DiscardAndDraw(t *testing.T) {
 }
 
 func TestConfirmCardDiscard_SkipOptionalDiscard(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -338,8 +326,7 @@ func TestConfirmCardDiscard_SkipOptionalDiscard(t *testing.T) {
 }
 
 func TestConfirmCardDiscard_RejectsNonHandCard(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -371,12 +358,11 @@ func TestConfirmCardDiscard_RejectsNonHandCard(t *testing.T) {
 	// Try to discard a card not in hand
 	confirmDiscard := confirmAction.NewConfirmCardDiscardAction(repo, cardRegistry, nil, logger)
 	err := confirmDiscard.Execute(ctx, testGame.ID(), owner.ID(), owner.Selection().GetPendingBehaviorResolutions()[0].ID, []string{"fake-card"})
-	testutil.AssertError(t, err, "Should reject discard of card not in hand")
+	testutil.AssertErrorContains(t, err, "not in player's hand", "Should reject discard of card not in hand")
 }
 
 func TestConfirmCardDiscard_RejectsWithoutPendingSelection(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -397,12 +383,11 @@ func TestConfirmCardDiscard_RejectsWithoutPendingSelection(t *testing.T) {
 
 	confirmDiscard := confirmAction.NewConfirmCardDiscardAction(repo, cardRegistry, nil, logger)
 	err := confirmDiscard.Execute(ctx, testGame.ID(), owner.ID(), "missing", []string{})
-	testutil.AssertError(t, err, "Should reject confirm when no pending selection exists")
+	testutil.AssertErrorContains(t, err, "no pending card discard selection", "Should reject confirm when no pending selection exists")
 }
 
 func TestConfirmCardDiscard_RejectsTooManyCards(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	logger := testutil.TestLogger()
 	ctx := context.Background()
 
@@ -435,7 +420,7 @@ func TestConfirmCardDiscard_RejectsTooManyCards(t *testing.T) {
 	// Try to discard 2 cards when max is 1
 	confirmDiscard := confirmAction.NewConfirmCardDiscardAction(repo, cardRegistry, nil, logger)
 	err := confirmDiscard.Execute(ctx, testGame.ID(), owner.ID(), owner.Selection().GetPendingBehaviorResolutions()[0].ID, []string{"card-1", "card-2"})
-	testutil.AssertError(t, err, "Should reject discarding too many cards")
+	testutil.AssertErrorContains(t, err, "can discard at most 1", "Should reject discarding too many cards")
 }
 
 // ============================================================================
@@ -463,8 +448,7 @@ func createAllOpponentsDrawTestCard() gamecards.Card {
 }
 
 func TestPlayCard_AllOpponentsDrawCard_TwoPlayers(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	additionalCards := []gamecards.Card{createAllOpponentsDrawTestCard()}
 	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards(additionalCards)
 	logger := testutil.TestLogger()
@@ -506,8 +490,7 @@ func TestPlayCard_AllOpponentsDrawCard_TwoPlayers(t *testing.T) {
 }
 
 func TestPlayCard_AllOpponentsDrawCard_ThreePlayers(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 3, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 3)
 	additionalCards := []gamecards.Card{createAllOpponentsDrawTestCard()}
 	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards(additionalCards)
 	logger := testutil.TestLogger()
@@ -550,8 +533,7 @@ func TestPlayCard_AllOpponentsDrawCard_ThreePlayers(t *testing.T) {
 }
 
 func TestPlayCard_AllOpponentsDrawCard_SoloMode(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	additionalCards := []gamecards.Card{createAllOpponentsDrawTestCard()}
 	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards(additionalCards)
 	logger := testutil.TestLogger()
@@ -663,13 +645,13 @@ func TestCardTake_OptionalAndBuySelection(t *testing.T) {
 				t.Fatal("missing selection")
 			}
 			confirm := confirmAction.NewConfirmCardDrawAction(repo, registry, testutil.TestLogger())
-			testutil.AssertError(t, confirm.Execute(context.Background(), g.ID(), id, []string{selection.AvailableCards[0]}, []string{selection.AvailableCards[0]}, shared.NativePayment(shared.ResourceCredit, len([]string{selection.AvailableCards[0]})*3)), "reject duplicate across free and bought lists")
+			testutil.AssertErrorContains(t, confirm.Execute(context.Background(), g.ID(), id, []string{selection.AvailableCards[0]}, []string{selection.AvailableCards[0]}, shared.NativePayment(shared.ResourceCredit, len([]string{selection.AvailableCards[0]})*3)), "duplicate selected card", "reject duplicate across free and bought lists")
 			testutil.AssertEqual(t, 20, p.Resources().Get().Credits, "invalid selection never charges")
 			if optional {
 				testutil.AssertEqual(t, 0, selection.MinFreeTakeCount, "optional minimum")
 				testutil.AssertNoError(t, confirm.Execute(context.Background(), g.ID(), id, nil, nil, shared.NativePayment(shared.ResourceCredit, 0*3)), "decline all optional cards")
 			} else {
-				testutil.AssertError(t, confirm.Execute(context.Background(), g.ID(), id, nil, []string{selection.AvailableCards[0]}, shared.NativePayment(shared.ResourceCredit, len([]string{selection.AvailableCards[0]})*3)), "buy cannot replace mandatory free take")
+				testutil.AssertErrorContains(t, confirm.Execute(context.Background(), g.ID(), id, nil, []string{selection.AvailableCards[0]}, shared.NativePayment(shared.ResourceCredit, len([]string{selection.AvailableCards[0]})*3)), "must take at least 1", "buy cannot replace mandatory free take")
 				testutil.AssertNoError(t, confirm.Execute(context.Background(), g.ID(), id, []string{selection.AvailableCards[0]}, []string{selection.AvailableCards[1]}, shared.NativePayment(shared.ResourceCredit, len([]string{selection.AvailableCards[1]})*3)), "take and buy")
 				testutil.AssertEqual(t, 17, p.Resources().Get().Credits, "charge only bought card")
 			}
@@ -687,13 +669,13 @@ func TestTriggeringCardStorage_ContextAndValidation(t *testing.T) {
 	apply := func(cardID, ownerID string, condition shared.BehaviorCondition) error {
 		return gamecards.NewBehaviorApplier(p, g, "Generic effect", testutil.TestLogger()).WithCardRegistry(registry).WithSourceCardID(testutil.CardID("Viral Enhancers")).WithTriggeringCard(cardID, ownerID).ApplyOutputs(context.Background(), []shared.BehaviorCondition{condition})
 	}
-	testutil.AssertError(t, apply("", "", output), "missing context cannot fall back to source")
-	testutil.AssertError(t, apply(card.ID, id, output), "wrong owner rejected")
-	testutil.AssertError(t, apply(testutil.CardID("Tardigrades"), id, output), "unplayed target rejected")
-	testutil.AssertError(t, apply(card.ID, opponentID, shared.NewCardStorageCondition(shared.ResourceMicrobe, 1, "triggering-card")), "incompatible storage rejected")
+	testutil.AssertErrorContains(t, apply("", "", output), "missing triggering card context", "missing context cannot fall back to source")
+	testutil.AssertErrorContains(t, apply(card.ID, id, output), "triggering card is not in play", "wrong owner rejected")
+	testutil.AssertErrorContains(t, apply(testutil.CardID("Tardigrades"), id, output), "triggering card is not in play", "unplayed target rejected")
+	testutil.AssertErrorContains(t, apply(card.ID, opponentID, shared.NewCardStorageCondition(shared.ResourceMicrobe, 1, "triggering-card")), "cannot store microbe", "incompatible storage rejected")
 	restricted := shared.NewCardStorageCondition(shared.ResourceAnimal, 1, "triggering-card")
 	restricted.Selectors = []shared.Selector{{Tags: []shared.CardTag{shared.TagScience}}}
-	testutil.AssertError(t, apply(card.ID, opponentID, restricted), "selectors enforced")
+	testutil.AssertErrorContains(t, apply(card.ID, opponentID, restricted), "does not match selectors", "selectors enforced")
 	testutil.AssertEqual(t, 0, opponent.Resources().GetCardStorage(card.ID), "invalid outputs do not mutate storage")
 	g.ClearTriggeredEffects()
 	testutil.AssertNoError(t, apply(card.ID, opponentID, output), "generic resource uses retained owner and storage type")

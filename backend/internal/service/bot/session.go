@@ -632,6 +632,8 @@ type reactionInput struct {
 	invocation Invocation
 	myTurn     bool
 	blocked    bool
+	// quiet means the phase forbids reactions: setup and the opening showcase.
+	quiet bool
 }
 
 func (s *botSession) readReaction(batch []Happening) (reactionInput, bool) {
@@ -675,7 +677,8 @@ func (s *botSession) readReaction(batch []Happening) (reactionInput, bool) {
 		for _, h := range in.assessment.Hostile {
 			in.names[h.ActorID] = nameOf(h.ActorID)
 		}
-		in.blocked = s.overBudget(snap.Game) || !presencePhase(snap.Game.CurrentPhase())
+		in.quiet = !presencePhase(snap.Game.CurrentPhase())
+		in.blocked = s.overBudget(snap.Game) || in.quiet
 		cfg := s.bc.cfg
 		in.invocation = Invocation{
 			Model:        cfg.ReactorModel,
@@ -696,6 +699,9 @@ func (s *botSession) considerReaction(batch []Happening) {
 	s.mu.Lock()
 	failed := s.failed
 	s.mu.Unlock()
+	if ran && in.quiet && in.assessment.Relevant() {
+		s.recordReaction(in.assessment, "quiet", "")
+	}
 	if !ran || in.blocked || failed {
 		return
 	}

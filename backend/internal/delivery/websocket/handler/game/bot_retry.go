@@ -28,29 +28,22 @@ func NewBotRetryHandler(bots BotRetrier) *BotRetryHandler {
 
 // HandleMessage processes a bot-retry request.
 func (h *BotRetryHandler) HandleMessage(ctx context.Context, connection *core.Connection, message dto.WebSocketMessage) {
-	if connection.GameID == "" || connection.PlayerID == "" {
-		h.sendError(connection, "not connected to game")
+	if connection.GameID() == "" || connection.PlayerID() == "" {
+		connection.SendError(message.Type, "not connected to game")
 		return
 	}
 	raw, err := json.Marshal(message.Payload)
 	if err != nil {
-		h.sendError(connection, "invalid payload")
+		connection.SendError(message.Type, "invalid payload")
 		return
 	}
 	var payload dto.BotRetryPayload
 	if err := json.Unmarshal(raw, &payload); err != nil || payload.PlayerID == "" {
-		h.sendError(connection, "invalid payload")
+		connection.SendError(message.Type, "invalid payload")
 		return
 	}
-	if err := h.bots.RetryBot(ctx, connection.GameID, connection.PlayerID, payload.PlayerID); err != nil {
-		h.logger.Warn("Bot retry rejected", slog.String("game_id", connection.GameID), slog.Any("error", err))
-		h.sendError(connection, err.Error())
+	if err := h.bots.RetryBot(ctx, connection.GameID(), connection.PlayerID(), payload.PlayerID); err != nil {
+		h.logger.Warn("Bot retry rejected", slog.String("game_id", connection.GameID()), slog.Any("error", err))
+		connection.SendError(message.Type, err.Error())
 	}
-}
-
-func (h *BotRetryHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.SendMessage(dto.WebSocketMessage{
-		Type:    dto.MessageTypeError,
-		Payload: map[string]interface{}{"error": errorMessage},
-	})
 }

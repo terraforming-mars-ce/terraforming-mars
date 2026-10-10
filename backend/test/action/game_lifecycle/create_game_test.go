@@ -8,6 +8,7 @@ import (
 
 	gameAction "openmars/internal/action/game"
 	"openmars/internal/game"
+	gamecards "openmars/internal/game/cards"
 	"openmars/internal/game/shared"
 	"openmars/test/testutil"
 )
@@ -23,7 +24,7 @@ func TestCreateGameAction_Success(t *testing.T) {
 	// Execute
 	settings := shared.GameSettings{
 		MaxPlayers: 4,
-		CardPacks:  []string{"base"},
+		CardPacks:  []string{shared.PackBaseGame},
 	}
 
 	createdGame, err := createAction.Execute(context.Background(), settings)
@@ -69,7 +70,7 @@ func TestCreateGameAction_DeckInitialization(t *testing.T) {
 	// Execute
 	settings := shared.GameSettings{
 		MaxPlayers: 4,
-		CardPacks:  []string{"base"},
+		CardPacks:  []string{shared.PackBaseGame},
 	}
 
 	createdGame, err := createAction.Execute(context.Background(), settings)
@@ -92,17 +93,15 @@ func TestCreateGameAction_MultipleCardPacks(t *testing.T) {
 
 	createAction := gameAction.NewCreateGameAction(repo, cardRegistry, testutil.CreateTestMapRegistry(), logger)
 
-	// Execute with multiple packs
-	settings := shared.GameSettings{
-		MaxPlayers: 4,
-		CardPacks:  []string{"base", "prelude"},
-	}
-
-	createdGame, err := createAction.Execute(context.Background(), settings)
-
-	// Assert
+	packs := []string{shared.PackBaseGame, shared.PackPrelude}
+	createdGame, err := createAction.Execute(context.Background(), shared.GameSettings{MaxPlayers: 4, CardPacks: packs})
 	testutil.AssertNoError(t, err, "Failed to create game with multiple card packs")
-	testutil.AssertTrue(t, createdGame.Deck() != nil, "Deck should be initialized with multiple packs")
+
+	projects, corps, preludes := gamecards.GetCardIDsByPacks(cardRegistry, packs)
+	testutil.AssertEqual(t, len(projects), len(createdGame.Deck().ProjectCards()), "every project card of both packs is in the deck")
+	testutil.AssertEqual(t, len(corps), len(createdGame.Deck().Corporations()), "every corporation of both packs is in the deck")
+	testutil.AssertEqual(t, len(preludes), len(createdGame.Deck().PreludeCards()), "every prelude is in the deck")
+	testutil.AssertTrue(t, len(preludes) > 0, "the prelude pack has preludes")
 }
 
 func TestCreateGameAction_BoardInitialization(t *testing.T) {
@@ -116,7 +115,7 @@ func TestCreateGameAction_BoardInitialization(t *testing.T) {
 	// Execute
 	settings := shared.GameSettings{
 		MaxPlayers: 2,
-		CardPacks:  []string{"base"},
+		CardPacks:  []string{shared.PackBaseGame},
 	}
 
 	createdGame, err := createAction.Execute(context.Background(), settings)

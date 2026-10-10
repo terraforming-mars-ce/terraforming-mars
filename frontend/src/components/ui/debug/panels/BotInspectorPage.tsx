@@ -4,15 +4,17 @@ import { getBotPersonaLabel } from "@/components/ui/display/BotChips.tsx";
 import { globalWebSocketManager } from "@/services/globalWebSocketManager.ts";
 import { useBotTraceStore } from "@/stores/botTraceStore.ts";
 import { useDebugHexHighlightStore } from "@/stores/debugHexHighlightStore.ts";
-import type {
-  BotCallDto,
-  BotCallStepDto,
-  BotGrudgeDto,
-  BotPlanDto,
-  BotReactionDto,
-  BotTraceDto,
-  BotTraceEventDto,
-  GameDto,
+import {
+  MessageTypeBotInspect,
+  type BotCallDto,
+  type BotCallStepDto,
+  type BotGrudgeDto,
+  type BotPlanDto,
+  type BotReactionDto,
+  type BotTraceDto,
+  type BotTraceEventDto,
+  type ErrorPayload,
+  type GameDto,
 } from "@/types/generated/api-types.ts";
 import PlayerSelector from "../PlayerSelector.tsx";
 
@@ -41,6 +43,7 @@ const DECISION_STYLES: Record<BotReactionDto["decision"], string> = {
   throttled: "bg-amber-700/70 text-white",
   busy: "bg-slate-600/70 text-white",
   "own-turn": "bg-indigo-600/70 text-white",
+  quiet: "bg-slate-800/70 text-white",
 };
 
 const STICK_THRESHOLD_PX = 24;
@@ -57,17 +60,8 @@ function isBotRunning(bot: BotPlayer | undefined): boolean {
   return bot !== undefined && bot.botStatus !== "loading" && bot.botStatus !== "failed";
 }
 
-function errorMessageOf(payload: unknown): string {
-  if (payload && typeof payload === "object") {
-    const record = payload as { error?: unknown; message?: unknown };
-    if (typeof record.error === "string") {
-      return record.error;
-    }
-    if (typeof record.message === "string") {
-      return record.message;
-    }
-  }
-  return "Bot inspection failed";
+function errorMessageOf(payload: ErrorPayload): string {
+  return payload.message || "Bot inspection failed";
 }
 
 function useBotTraceSubscription(playerId: string, active: boolean) {
@@ -96,8 +90,10 @@ function useBotTraceSubscription(playerId: string, active: boolean) {
     const handleEvent = (event: BotTraceEventDto) => {
       useBotTraceStore.getState().applyEvent(event);
     };
-    const handleError = (payload: unknown) => {
-      useBotTraceStore.getState().fail(errorMessageOf(payload));
+    const handleError = (payload: ErrorPayload) => {
+      if (payload.requestType === MessageTypeBotInspect) {
+        useBotTraceStore.getState().fail(errorMessageOf(payload));
+      }
     };
 
     globalWebSocketManager.on("bot-trace-snapshot", handleSnapshot);

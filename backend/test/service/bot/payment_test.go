@@ -34,5 +34,5 @@ func TestPreferredPayment_FailsWhenUnaffordable(t *testing.T) {
 		Options: []shared.PaymentOption{{Source: credit, TargetResource: shared.ResourceCredit, ConversionRate: 1, Available: 5}},
 	}
 	_, err := bot.PreferredPayment(quote, map[string]int{"steel": 3})
-	testutil.AssertError(t, err, "not enough to pay")
+	testutil.AssertErrorContains(t, err, "cannot cover 8 credit", "not enough to pay")
 }

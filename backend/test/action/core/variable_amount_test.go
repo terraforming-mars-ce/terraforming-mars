@@ -275,7 +275,7 @@ func TestPowerInfrastructure_FailsWhenInsufficientEnergy(t *testing.T) {
 	useAction := cardAction.NewUseCardActionAction(repo, cardRegistry, nil, logger)
 	selectedAmount := 5
 	err := useAction.Execute(ctx, testGame.ID(), playerID, cardID, 0, nil, nil, nil, nil, &selectedAmount, nil, nil, nil)
-	testutil.AssertError(t, err, "Should fail when trying to spend more energy than available")
+	testutil.AssertErrorContains(t, err, "payment exceeds available source pool", "Should fail when trying to spend more energy than available")
 
 	// Verify resources unchanged
 	resources := p.Resources().Get()

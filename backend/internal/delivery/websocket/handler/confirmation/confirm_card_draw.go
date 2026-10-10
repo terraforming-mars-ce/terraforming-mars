@@ -42,27 +42,26 @@ func (h *ConfirmCardDrawHandler) HandleMessage(ctx context.Context, connection *
 
 	log.Debug("Processing confirm card draw request")
 
-	if connection.GameID == "" || connection.PlayerID == "" {
+	if connection.GameID() == "" || connection.PlayerID() == "" {
 		log.Error("Missing connection context")
-		h.sendError(connection, "Not connected to a game")
+		connection.SendError(message.Type, "Not connected to a game")
 		return
 	}
 
 	payloadMap, ok := message.Payload.(map[string]interface{})
 	if !ok {
 		log.Error("Invalid payload format")
-		h.sendError(connection, "Invalid payload format")
+		connection.SendError(message.Type, "Invalid payload format")
 		return
 	}
 
 	if message.Type == dto.MessageTypeActionAcknowledgeCardReceipt {
 		id, _ := payloadMap["receiptId"].(string)
-		if err := h.action.AcknowledgeReceipt(ctx, connection.GameID, connection.PlayerID, id); err != nil {
-			h.sendError(connection, err.Error())
+		if err := h.action.AcknowledgeReceipt(ctx, connection.GameID(), connection.PlayerID(), id); err != nil {
+			connection.SendError(message.Type, err.Error())
 			return
 		}
-		h.broadcaster.BroadcastGameState(connection.GameID, []string{connection.PlayerID})
-		connection.Send <- dto.WebSocketMessage{Type: "action-success", GameID: connection.GameID, Payload: map[string]interface{}{"action": "acknowledge-card-receipt", "success": true}}
+		h.broadcaster.BroadcastGameState(connection.GameID(), []string{connection.PlayerID()})
 		return
 	}
 	var cardsToTake []string
@@ -94,43 +93,24 @@ func (h *ConfirmCardDrawHandler) HandleMessage(ctx context.Context, connection *
 	}
 	paymentBytes, paymentErr := json.Marshal(message.Payload)
 	if paymentErr != nil {
-		h.sendError(connection, "Invalid payment")
+		connection.SendError(message.Type, "Invalid payment")
 		return
 	}
 	if paymentErr = json.Unmarshal(paymentBytes, &paymentEnvelope); paymentErr != nil {
-		h.sendError(connection, "Invalid payment")
+		connection.SendError(message.Type, "Invalid payment")
 		return
 	}
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID, cardsToTake, cardsToBuy, paymentEnvelope.Payment)
+	err := h.action.Execute(ctx, connection.GameID(), connection.PlayerID(), cardsToTake, cardsToBuy, paymentEnvelope.Payment)
 	if err != nil {
 		log.Error("Failed to execute confirm card draw action", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
 	log.Debug("Card draw confirmed")
 
-	h.broadcaster.BroadcastGameState(connection.GameID, nil)
+	h.broadcaster.BroadcastGameState(connection.GameID(), nil)
 	log.Debug("Broadcasted game state to all players")
 
-	response := dto.WebSocketMessage{
-		Type:   "action-success",
-		GameID: connection.GameID,
-		Payload: map[string]interface{}{
-			"action":  "confirm-card-draw",
-			"success": true,
-		},
-	}
-
-	connection.Send <- response
-}
-
-func (h *ConfirmCardDrawHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	}
 }

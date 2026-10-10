@@ -35,37 +35,20 @@ func (h *ConfirmInitAdvanceHandler) HandleMessage(ctx context.Context, connectio
 
 	log.Debug("Processing init phase advance request")
 
-	if connection.GameID == "" || connection.PlayerID == "" {
-		h.sendError(connection, "Not connected to a game")
+	if connection.GameID() == "" || connection.PlayerID() == "" {
+		connection.SendError(message.Type, "Not connected to a game")
 		return
 	}
 
-	err := h.action.Execute(ctx, connection.GameID, connection.PlayerID)
+	err := h.action.Execute(ctx, connection.GameID(), connection.PlayerID())
 	if err != nil {
 		log.Error("Failed to execute init advance", slog.Any("error", err))
-		h.sendError(connection, err.Error())
+		connection.SendError(message.Type, err.Error())
 		return
 	}
 
 	log.Debug("Init advance completed")
 
-	h.broadcaster.BroadcastGameState(connection.GameID, nil)
+	h.broadcaster.BroadcastGameState(connection.GameID(), nil)
 
-	connection.Send <- dto.WebSocketMessage{
-		Type:   "action-success",
-		GameID: connection.GameID,
-		Payload: map[string]interface{}{
-			"action":  "confirm-init-advance",
-			"success": true,
-		},
-	}
-}
-
-func (h *ConfirmInitAdvanceHandler) sendError(connection *core.Connection, errorMessage string) {
-	connection.Send <- dto.WebSocketMessage{
-		Type: dto.MessageTypeError,
-		Payload: map[string]interface{}{
-			"error": errorMessage,
-		},
-	}
 }

@@ -12,8 +12,7 @@ import (
 )
 
 func TestToSpectatorGameDto_AllPlayersAsOtherPlayers(t *testing.T) {
-	mockBroadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 3, mockBroadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 3)
 	cardRegistry := testutil.CreateTestCardRegistry()
 
 	gameDto := dto.ToSpectatorGameDto(testGame, cardRegistry, nil, nil)
@@ -24,8 +23,7 @@ func TestToSpectatorGameDto_AllPlayersAsOtherPlayers(t *testing.T) {
 }
 
 func TestToSpectatorGameDto_IsSpectatorTrue(t *testing.T) {
-	mockBroadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, mockBroadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2)
 	cardRegistry := testutil.CreateTestCardRegistry()
 
 	gameDto := dto.ToSpectatorGameDto(testGame, cardRegistry, nil, nil)
@@ -34,8 +32,7 @@ func TestToSpectatorGameDto_IsSpectatorTrue(t *testing.T) {
 }
 
 func TestToSpectatorGameDto_NoHandCards(t *testing.T) {
-	mockBroadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, mockBroadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2)
 	cardRegistry := testutil.CreateTestCardRegistry()
 
 	gameDto := dto.ToSpectatorGameDto(testGame, cardRegistry, nil, nil)
@@ -46,8 +43,7 @@ func TestToSpectatorGameDto_NoHandCards(t *testing.T) {
 }
 
 func TestToSpectatorGameDto_IncludesSpectators(t *testing.T) {
-	mockBroadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, mockBroadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	ctx := context.Background()
 
@@ -63,8 +59,7 @@ func TestToSpectatorGameDto_IncludesSpectators(t *testing.T) {
 }
 
 func TestToSpectatorGameDto_IncludesChatMessages(t *testing.T) {
-	mockBroadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, mockBroadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	ctx := context.Background()
 
@@ -91,8 +86,7 @@ func TestToSpectatorGameDto_IncludesChatMessages(t *testing.T) {
 }
 
 func TestToGameDto_IncludesSpectatorList(t *testing.T) {
-	mockBroadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, mockBroadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	ctx := context.Background()
 
@@ -107,8 +101,7 @@ func TestToGameDto_IncludesSpectatorList(t *testing.T) {
 }
 
 func TestToGameDto_IncludesChatMessages(t *testing.T) {
-	mockBroadcaster := testutil.NewMockBroadcaster()
-	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2, mockBroadcaster)
+	testGame, _ := testutil.CreateTestGameWithPlayers(t, 2)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	ctx := context.Background()
 

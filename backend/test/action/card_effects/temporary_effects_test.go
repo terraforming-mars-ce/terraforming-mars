@@ -41,8 +41,7 @@ func createOxygenMaxReqTestCard() gamecards.Card {
 // TestIndenturedWorkers_DiscountAppliedToNextCard verifies that playing Indentured Workers
 // creates a temporary 8 M€ discount that applies to the next card played.
 func TestIndenturedWorkers_DiscountAppliedToNextCard(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -99,8 +98,7 @@ func TestIndenturedWorkers_DiscountAppliedToNextCard(t *testing.T) {
 // TestIndenturedWorkers_DiscountRemovedAfterOneCard verifies that the discount only
 // applies to one card and is then removed.
 func TestIndenturedWorkers_DiscountRemovedAfterOneCard(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -146,8 +144,7 @@ func TestIndenturedWorkers_DiscountRemovedAfterOneCard(t *testing.T) {
 // TestSpecialDesign_LenienceAppliedToNextCard verifies that playing Special Design
 // allows the next card to be played with ±2 global parameter lenience.
 func TestSpecialDesign_LenienceAppliedToNextCard(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	additionalCards := []gamecards.Card{createTempReqTestCard()}
 	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards(additionalCards)
 	logger := testutil.TestLogger()
@@ -216,8 +213,7 @@ func TestSpecialDesign_LenienceAppliedToNextCard(t *testing.T) {
 
 // TestSpecialDesign_LenienceWithMaxRequirement verifies lenience also works for max requirements.
 func TestSpecialDesign_LenienceWithMaxRequirement(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	additionalCards := []gamecards.Card{createOxygenMaxReqTestCard()}
 	cardRegistry := testutil.CreateTestCardRegistryWithAdditionalCards(additionalCards)
 	logger := testutil.TestLogger()
@@ -273,8 +269,7 @@ func TestSpecialDesign_LenienceWithMaxRequirement(t *testing.T) {
 // TestTemporaryEffects_ClearedOnGenerationAdvance verifies that temporary effects
 // are cleared when the generation advances.
 func TestTemporaryEffects_ClearedOnGenerationAdvance(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()
@@ -314,8 +309,7 @@ func TestTemporaryEffects_ClearedOnGenerationAdvance(t *testing.T) {
 // TestIndenturedWorkers_WithExistingPermanentDiscount verifies that playing
 // Indentured Workers doesn't affect existing permanent discounts.
 func TestIndenturedWorkers_WithExistingPermanentDiscount(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1, broadcaster)
+	testGame, repo := testutil.CreateTestGameWithPlayers(t, 1)
 	cardRegistry := testutil.CreateTestCardRegistry()
 	logger := testutil.TestLogger()
 	ctx := context.Background()

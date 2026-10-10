@@ -133,8 +133,7 @@ func TestKickPlayer_TheirTurn_AllPassedTriggersProduction(t *testing.T) {
 }
 
 func TestKickPlayer_StartingSelection_AdvancesGame(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 2, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 2)
 	ctx := testutil.TestContext()
 	kick := newKickAction(repo, nil)
 
@@ -182,8 +181,7 @@ func TestKickPlayer_StartingSelection_AdvancesGame(t *testing.T) {
 }
 
 func TestKickPlayer_StartingSelection_WaitsForOthers(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 3, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 3)
 	ctx := testutil.TestContext()
 	kick := newKickAction(repo, nil)
 
@@ -307,7 +305,7 @@ func TestKickPlayer_ExitedPlayerCannotReconnect(t *testing.T) {
 	// Try to reconnect via takeover
 	takeoverAction := connection.NewPlayerTakeoverAction(repo, cardRegistry, testutil.TestLogger())
 	_, err = takeoverAction.Execute(ctx, g.ID(), targetID)
-	testutil.AssertError(t, err, "Exited player should not be able to reconnect")
+	testutil.AssertErrorContains(t, err, "player has been kicked from the game", "Exited player should not be able to reconnect")
 }
 
 func TestKickPlayer_TurnSkipsExitedPlayer(t *testing.T) {
@@ -393,7 +391,7 @@ func TestKickPlayer_OnlyHostCanKick(t *testing.T) {
 	}
 
 	err := kick.Execute(ctx, g.ID(), nonHostRequester, nonHostTarget)
-	testutil.AssertError(t, err, "Non-host should not be able to kick")
+	testutil.AssertErrorContains(t, err, "only host can kick players", "Non-host should not be able to kick")
 
 	target, _ := g.GetPlayer(nonHostTarget)
 	testutil.AssertFalse(t, target.HasExited(), "Player should not be exited")
@@ -407,7 +405,7 @@ func TestKickPlayer_CannotKickSelf(t *testing.T) {
 	hostID := g.HostPlayerID()
 
 	err := kick.Execute(ctx, g.ID(), hostID, hostID)
-	testutil.AssertError(t, err, "Should not be able to kick yourself")
+	testutil.AssertErrorContains(t, err, "cannot kick yourself", "Should not be able to kick yourself")
 }
 
 func TestKickPlayer_CannotKickAlreadyExited(t *testing.T) {
@@ -433,12 +431,11 @@ func TestKickPlayer_CannotKickAlreadyExited(t *testing.T) {
 
 	// Kick again - should fail
 	err = kick.Execute(ctx, g.ID(), hostID, targetID)
-	testutil.AssertError(t, err, "Should not be able to kick already exited player")
+	testutil.AssertErrorContains(t, err, "player already exited", "Should not be able to kick already exited player")
 }
 
 func TestKickPlayer_LobbyKickRemovesPlayer(t *testing.T) {
-	broadcaster := testutil.NewMockBroadcaster()
-	g, repo := testutil.CreateTestGameWithPlayers(t, 3, broadcaster)
+	g, repo := testutil.CreateTestGameWithPlayers(t, 3)
 	ctx := testutil.TestContext()
 	kick := newKickAction(repo, nil)
 

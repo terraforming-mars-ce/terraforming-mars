@@ -44,7 +44,8 @@ func TestConvertHeat_RejectsDuringProductionPhase(t *testing.T) {
 	action := resconvAction.NewConvertHeatToTemperatureAction(repo, cardRegistry, nil, logger)
 	err := action.Execute(context.Background(), testGame.ID(), playerID, shared.NativePayment(shared.ResourceHeat, 8))
 
-	testutil.AssertError(t, err, "Convert heat should be rejected during production phase")
+	testutil.AssertErrorContains(t, err, "game not in action phase", "Convert heat should be rejected during production phase")
+	testutil.AssertEqual(t, 8, player.Resources().Get().Heat, "heat unchanged")
 }
 
 func TestConvertPlantsToGreenery_RejectsDuringProductionPhase(t *testing.T) {
@@ -60,7 +61,8 @@ func TestConvertPlantsToGreenery_RejectsDuringProductionPhase(t *testing.T) {
 	action := resconvAction.NewConvertPlantsToGreeneryAction(repo, cardRegistry, nil, logger)
 	err := action.Execute(context.Background(), testGame.ID(), playerID, shared.NativePayment(shared.ResourcePlant, 8))
 
-	testutil.AssertError(t, err, "Convert plants should be rejected during production phase")
+	testutil.AssertErrorContains(t, err, "game not in action or final phase", "Convert plants should be rejected during production phase")
+	testutil.AssertEqual(t, 8, player.Resources().Get().Plants, "plants unchanged")
 }
 
 func createPhaseTestStdProjRegistry(t *testing.T) standardproject.StandardProjectRegistry {
@@ -82,7 +84,7 @@ func TestSellPatents_RejectsDuringProductionPhase(t *testing.T) {
 	action := stdAction.NewExecuteStandardProjectAction(repo, nil, stdProjRegistry, nil, logger)
 	err := action.Execute(context.Background(), testGame.ID(), playerID, "sell-patents", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("sell-patents")]))
 
-	testutil.AssertError(t, err, "Sell patents should be rejected during production phase")
+	testutil.AssertErrorContains(t, err, "game not in action phase", "Sell patents should be rejected during production phase")
 }
 
 func TestBuildPowerPlant_RejectsDuringProductionPhase(t *testing.T) {
@@ -97,7 +99,8 @@ func TestBuildPowerPlant_RejectsDuringProductionPhase(t *testing.T) {
 	action := stdAction.NewExecuteStandardProjectAction(repo, cardRegistry, stdProjRegistry, nil, logger)
 	err := action.Execute(context.Background(), testGame.ID(), playerID, "power-plant", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("power-plant")]))
 
-	testutil.AssertError(t, err, "Build power plant should be rejected during production phase")
+	testutil.AssertErrorContains(t, err, "game not in action phase", "Build power plant should be rejected during production phase")
+	testutil.AssertEqual(t, 20, player.Resources().Get().Credits, "credits unchanged")
 }
 
 func TestBuildAquifer_RejectsDuringProductionPhase(t *testing.T) {
@@ -111,7 +114,8 @@ func TestBuildAquifer_RejectsDuringProductionPhase(t *testing.T) {
 	action := stdAction.NewExecuteStandardProjectAction(repo, nil, stdProjRegistry, nil, logger)
 	err := action.Execute(context.Background(), testGame.ID(), playerID, "aquifer", shared.NativePayment(shared.ResourceCredit, shared.StandardProjectCost[shared.StandardProject("aquifer")]))
 
-	testutil.AssertError(t, err, "Build aquifer should be rejected during production phase")
+	testutil.AssertErrorContains(t, err, "game not in action phase", "Build aquifer should be rejected during production phase")
+	testutil.AssertEqual(t, 20, player.Resources().Get().Credits, "credits unchanged")
 }
 
 func TestClaimMilestone_RejectsDuringProductionPhase(t *testing.T) {
@@ -123,7 +127,7 @@ func TestClaimMilestone_RejectsDuringProductionPhase(t *testing.T) {
 	action := milestoneAction.NewClaimMilestoneAction(repo, cardRegistry, nil, milestoneRegistry, logger)
 	err := action.Execute(context.Background(), testGame.ID(), playerID, "terraformer", shared.NativePayment(shared.ResourceCredit, 8))
 
-	testutil.AssertError(t, err, "Claim milestone should be rejected during production phase")
+	testutil.AssertErrorContains(t, err, "game not in action phase", "Claim milestone should be rejected during production phase")
 }
 
 func TestFundAward_RejectsDuringProductionPhase(t *testing.T) {
@@ -135,7 +139,7 @@ func TestFundAward_RejectsDuringProductionPhase(t *testing.T) {
 	action := awardAction.NewFundAwardAction(repo, cardRegistry, nil, awardRegistry, logger)
 	err := action.Execute(context.Background(), testGame.ID(), playerID, "landlord", shared.NativePayment(shared.ResourceCredit, 8))
 
-	testutil.AssertError(t, err, "Fund award should be rejected during production phase")
+	testutil.AssertErrorContains(t, err, "game not in action phase", "Fund award should be rejected during production phase")
 }
 
 func TestConfirmSellPatents_RejectsDuringProductionPhase(t *testing.T) {
@@ -145,5 +149,5 @@ func TestConfirmSellPatents_RejectsDuringProductionPhase(t *testing.T) {
 	action := confirmAction.NewConfirmSellPatentsAction(repo, nil, logger)
 	err := action.Execute(context.Background(), testGame.ID(), playerID, []string{})
 
-	testutil.AssertError(t, err, "Confirm sell patents should be rejected during production phase")
+	testutil.AssertErrorContains(t, err, "game not in action phase", "Confirm sell patents should be rejected during production phase")
 }
