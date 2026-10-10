@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	ws "terraforming-mars-backend/internal/delivery/websocket"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/delivery/websocket/handler/connection"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/delivery/dto"
+	ws "openmars/internal/delivery/websocket"
+	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/delivery/websocket/handler/connection"
+	"openmars/internal/game"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 type mockLogBroadcaster struct {

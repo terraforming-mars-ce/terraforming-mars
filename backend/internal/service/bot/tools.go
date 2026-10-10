@@ -7,10 +7,10 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"terraforming-mars-backend/internal/action"
-	colonyAction "terraforming-mars-backend/internal/action/colony"
-	pfAction "terraforming-mars-backend/internal/action/projectfunding"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/action"
+	colonyAction "openmars/internal/action/colony"
+	pfAction "openmars/internal/action/projectfunding"
+	"openmars/internal/game/shared"
 )
 
 type noInput struct{}

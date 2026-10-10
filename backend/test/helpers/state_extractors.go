@@ -3,7 +3,7 @@ package helpers
 import (
 	"testing"
 
-	"terraforming-mars-backend/internal/delivery/dto"
+	"openmars/internal/delivery/dto"
 )
 
 // ExtractPlayerIDs extracts player IDs from game state map

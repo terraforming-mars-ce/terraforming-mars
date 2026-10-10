@@ -5,8 +5,8 @@ import (
 	"slices"
 	"testing"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/delivery/dto"
+	"openmars/test/testutil"
 )
 
 func TestCardDto_PreservesCombinedTagCount(t *testing.T) {

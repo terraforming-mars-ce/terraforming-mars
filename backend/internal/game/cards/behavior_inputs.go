@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"slices"
 
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/shared"
 )
 
 // WithInputCardIDs sets the sources of any-card inputs in input order.

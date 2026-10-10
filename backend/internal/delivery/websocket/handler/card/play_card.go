@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"log/slog"
 
-	cardaction "terraforming-mars-backend/internal/action/card"
+	cardaction "openmars/internal/action/card"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/logger"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/logger"
 )
 
 // PlayCardHandler handles play card requests

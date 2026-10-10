@@ -17,11 +17,11 @@ interface GatewayServer {
 
 declare global {
   interface Window {
-    __TM_GATEWAY__?: GatewayServer;
+    __OPENMARS_GATEWAY__?: GatewayServer;
   }
 }
 
-export const gatewayServer: GatewayServer | null = window.__TM_GATEWAY__ ?? null;
+export const gatewayServer: GatewayServer | null = window.__OPENMARS_GATEWAY__ ?? null;
 
 /**
  * Keys for data that only means something on one server (game sessions). All

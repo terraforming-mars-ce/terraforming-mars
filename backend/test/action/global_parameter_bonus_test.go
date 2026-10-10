@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"terraforming-mars-backend/test/testutil"
+	"openmars/test/testutil"
 )
 
 func TestTemperatureBonus_HeatProductionAtMinus24(t *testing.T) {

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	"openmars/internal/game/board"
+	"openmars/internal/game/shared"
 )
 
 // StartTileSelectionAction handles the admin action to start tile selection for a player

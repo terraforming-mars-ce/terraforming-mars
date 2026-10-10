@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	confirmAction "terraforming-mars-backend/internal/action/confirmation"
-	gameaction "terraforming-mars-backend/internal/action/game"
-	resconv "terraforming-mars-backend/internal/action/resource_conversion"
-	turnmgmt "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	confirmAction "openmars/internal/action/confirmation"
+	gameaction "openmars/internal/action/game"
+	resconv "openmars/internal/action/resource_conversion"
+	turnmgmt "openmars/internal/action/turn_management"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // TestFinalPhase_TransitionAfterProduction verifies that after confirming

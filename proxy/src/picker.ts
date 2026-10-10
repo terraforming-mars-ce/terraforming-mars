@@ -28,7 +28,7 @@ export function showPicker({ servers, notice, currentAlias, onPick }: PickerOpti
   const shell = element("div", "", "shell");
   const intro = element("header", "", "intro");
   const title = element("h1", "", "title");
-  title.append("TERRAFORMING ", document.createElement("br"), "MARS");
+  title.append("OPEN ", document.createElement("br"), "MARS");
   intro.append(title, element("p", "Server selector", "subtitle"));
 
   const choices = element("section", "", "choices");

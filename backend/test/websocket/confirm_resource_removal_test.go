@@ -2,9 +2,9 @@ package websocket_test
 
 import (
 	"context"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/delivery/websocket/handler/confirmation"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/delivery/websocket/handler/confirmation"
 	"testing"
 )
 

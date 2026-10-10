@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"slices"
 
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/shared"
 )
 
 func (a *BehaviorApplier) applyColonyOutput(ctx context.Context, o *shared.ColonyCondition, amount int, log *slog.Logger) error {

@@ -1,7 +1,7 @@
 package cards
 
 import (
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/shared"
 )
 
 // TargetType represents different targeting scopes

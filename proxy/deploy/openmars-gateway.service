@@ -1,0 +1,20 @@
+[Unit]
+Description=Open Mars gateway (server picker)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+# OPENMARS_SERVERS from gateway.env in the repo, OPENMARS_VERSION from the deploy
+EnvironmentFile=/etc/openmars-gateway/gateway.env
+ExecStartPre=-/usr/bin/docker rm -f openmars-gateway
+ExecStart=/usr/bin/docker run --rm --name openmars-gateway \
+    -p 127.0.0.1:4000:4000 \
+    -e OPENMARS_SERVERS \
+    ghcr.io/openmars-app/openmars-proxy:${OPENMARS_VERSION}
+ExecStop=/usr/bin/docker stop openmars-gateway
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

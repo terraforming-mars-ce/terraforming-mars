@@ -1,15 +1,15 @@
 services:
   app:
-    image: ghcr.io/terraforming-mars-ce/terraforming-mars:latest
-    container_name: terraforming-mars
+    image: ghcr.io/openmars-app/openmars:latest
+    container_name: openmars
     restart: unless-stopped
     ports:
       - "3001:3001"
     environment:
-      - TM_LOG_LEVEL=${TM_LOG_LEVEL:-info}
+      - OPENMARS_LOG_LEVEL=${OPENMARS_LOG_LEVEL:-info}
       # Identity shown by a gateway that fronts several servers (lowercase a-z, 0-9, -)
-      - TM_SERVER_ALIAS=${TM_SERVER_ALIAS:-local}
-      - TM_SERVER_NAME=${TM_SERVER_NAME:-}
+      - OPENMARS_SERVER_ALIAS=${OPENMARS_SERVER_ALIAS:-local}
+      - OPENMARS_SERVER_NAME=${OPENMARS_SERVER_NAME:-}
       # Bug reporting (optional -- game works without these)
       - GITHUB_APP_ID=${GITHUB_APP_ID:-}
       - GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID:-}

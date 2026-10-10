@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"terraforming-mars-backend/internal/action"
-	cardAction "terraforming-mars-backend/internal/action/card"
-	confirmAction "terraforming-mars-backend/internal/action/confirmation"
-	"terraforming-mars-backend/internal/events"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/action"
+	cardAction "openmars/internal/action/card"
+	confirmAction "openmars/internal/action/confirmation"
+	"openmars/internal/events"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // ============================================================================

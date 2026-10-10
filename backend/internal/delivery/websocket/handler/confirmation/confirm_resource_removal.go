@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"log/slog"
 
-	confirmaction "terraforming-mars-backend/internal/action/confirmation"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/logger"
+	confirmaction "openmars/internal/action/confirmation"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/logger"
 )
 
 // ConfirmResourceRemovalHandler handles confirm resource removal requests

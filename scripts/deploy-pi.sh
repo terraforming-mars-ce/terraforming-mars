@@ -2,12 +2,12 @@
 set -euo pipefail
 
 PI_HOST="${PI_HOST:-mhm@ssh.mh-hemma.rackaracka.net}"
-PI_COMPOSE_DIR="${PI_COMPOSE_DIR:-/home/mhm/terraforming-mars}"
+PI_COMPOSE_DIR="${PI_COMPOSE_DIR:-/home/mhm/openmars}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-APP_IMAGE="ghcr.io/terraforming-mars-ce/terraforming-mars:latest"
+APP_IMAGE="ghcr.io/openmars-app/openmars:latest"
 
 GIT_DESCRIBE=$(git -C "$PROJECT_ROOT" describe --tags --always)
 if echo "$GIT_DESCRIBE" | grep -q '-'; then
@@ -25,7 +25,7 @@ usage() {
     echo ""
     echo "Environment variables:"
     echo "  PI_HOST         SSH target (default: mhm@ssh.mh-hemma.rackaracka.net)"
-    echo "  PI_COMPOSE_DIR  Remote compose dir (default: /home/mhm/terraforming-mars)"
+    echo "  PI_COMPOSE_DIR  Remote compose dir (default: /home/mhm/openmars)"
 }
 
 build() {
@@ -77,7 +77,7 @@ REMOTE
 
     ssh "$PI_HOST" bash <<'HEALTHCHECK'
 set -euo pipefail
-for container in tm-app; do
+for container in openmars-app; do
     status=$(docker inspect "$container" --format '{{.State.Status}}')
     if [ "$status" = "running" ]; then
         echo "    $container: running"

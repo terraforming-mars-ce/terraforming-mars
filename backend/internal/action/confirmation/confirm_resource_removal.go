@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	baseaction "terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
+	baseaction "openmars/internal/action"
+	"openmars/internal/game"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/shared"
 )
 
 // ConfirmResourceRemovalAction resolves an optional, restricted resource removal.

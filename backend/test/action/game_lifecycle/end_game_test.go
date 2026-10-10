@@ -3,9 +3,9 @@ package game_lifecycle_test
 import (
 	"testing"
 
-	"terraforming-mars-backend/internal/action/connection"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/action/connection"
+	"openmars/internal/game"
+	"openmars/test/testutil"
 )
 
 func newEndGameAction(repo game.GameRepository) *connection.EndGameAction {

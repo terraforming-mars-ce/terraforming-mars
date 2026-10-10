@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"terraforming-mars-backend/internal/delivery/dto"
+	"openmars/internal/delivery/dto"
 )
 
 // ActionRegistry manages the registration and lookup of action handlers

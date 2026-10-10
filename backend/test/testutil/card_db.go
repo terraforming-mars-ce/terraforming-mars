@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"sync"
 
-	gamecards "terraforming-mars-backend/internal/game/cards"
+	gamecards "openmars/internal/game/cards"
 )
 
 var (
@@ -18,7 +18,7 @@ var (
 
 func loadCards() {
 	_, currentFile, _, _ := runtime.Caller(0)
-	jsonPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "assets", "terraforming_mars_cards.json")
+	jsonPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "assets", "cards.json")
 
 	cardList, err := gamecards.LoadCardsFromJSON(jsonPath)
 	if err != nil {

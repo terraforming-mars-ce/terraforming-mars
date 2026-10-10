@@ -8,10 +8,10 @@ import (
 
 	"github.com/google/uuid"
 
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	"openmars/internal/game/board"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/shared"
 )
 
 // CreateGameAction handles the business logic for creating new games

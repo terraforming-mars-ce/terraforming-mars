@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
-	"terraforming-mars-backend/internal/action"
-	cardAction "terraforming-mars-backend/internal/action/card"
-	"terraforming-mars-backend/internal/game/board"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/action"
+	cardAction "openmars/internal/action/card"
+	"openmars/internal/game/board"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // ============================================================================

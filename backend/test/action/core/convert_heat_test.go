@@ -1,15 +1,15 @@
 package core_test
 
-import "terraforming-mars-backend/internal/game/shared"
+import "openmars/internal/game/shared"
 
 import (
 	"context"
 	"testing"
 
-	resconvAction "terraforming-mars-backend/internal/action/resource_conversion"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/test/testutil"
+	resconvAction "openmars/internal/action/resource_conversion"
+	"openmars/internal/game"
+	"openmars/internal/game/cards"
+	"openmars/test/testutil"
 )
 
 func setupActiveGame(t *testing.T) (*game.Game, game.GameRepository, cards.CardRegistry, string) {

@@ -82,7 +82,7 @@ func (c Card) MarshalJSON() ([]byte, error) {
 
 func main() {
 	// Read the cards JSON file
-	filePath := "../assets/terraforming_mars_cards.json"
+	filePath := "../assets/cards.json"
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		fmt.Printf("Error reading file: %v\n", err)

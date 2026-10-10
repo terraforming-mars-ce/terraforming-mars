@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	gameaction "terraforming-mars-backend/internal/action/game"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	gameaction "openmars/internal/action/game"
+	"openmars/internal/game/board"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // TestFinalScoring_CardVPIncluded verifies that FinalScoringAction produces

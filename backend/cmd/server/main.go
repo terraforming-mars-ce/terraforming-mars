@@ -12,39 +12,39 @@ import (
 	"syscall"
 	"time"
 
-	admin "terraforming-mars-backend/internal/action/admin"
-	awardAction "terraforming-mars-backend/internal/action/award"
-	cardAction "terraforming-mars-backend/internal/action/card"
-	colonyAction "terraforming-mars-backend/internal/action/colony"
-	confirmAction "terraforming-mars-backend/internal/action/confirmation"
-	connAction "terraforming-mars-backend/internal/action/connection"
-	gameAction "terraforming-mars-backend/internal/action/game"
-	milestoneAction "terraforming-mars-backend/internal/action/milestone"
-	pfAction "terraforming-mars-backend/internal/action/projectfunding"
-	query "terraforming-mars-backend/internal/action/query"
-	resconvAction "terraforming-mars-backend/internal/action/resource_conversion"
-	stdprojAction "terraforming-mars-backend/internal/action/standard_project"
-	tileAction "terraforming-mars-backend/internal/action/tile"
-	turnAction "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/delivery/dto"
-	httpHandler "terraforming-mars-backend/internal/delivery/http"
-	"terraforming-mars-backend/internal/delivery/web"
-	wsHandler "terraforming-mars-backend/internal/delivery/websocket"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/award"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/colony"
-	"terraforming-mars-backend/internal/game/datastore"
-	msLoader "terraforming-mars-backend/internal/game/milestone"
-	pfLoader "terraforming-mars-backend/internal/game/projectfunding"
-	"terraforming-mars-backend/internal/game/shared"
-	stdprojLoader "terraforming-mars-backend/internal/game/standardproject"
-	"terraforming-mars-backend/internal/logger"
-	httpmiddleware "terraforming-mars-backend/internal/middleware/http"
-	"terraforming-mars-backend/internal/service/bot"
-	"terraforming-mars-backend/internal/service/bugreport"
+	admin "openmars/internal/action/admin"
+	awardAction "openmars/internal/action/award"
+	cardAction "openmars/internal/action/card"
+	colonyAction "openmars/internal/action/colony"
+	confirmAction "openmars/internal/action/confirmation"
+	connAction "openmars/internal/action/connection"
+	gameAction "openmars/internal/action/game"
+	milestoneAction "openmars/internal/action/milestone"
+	pfAction "openmars/internal/action/projectfunding"
+	query "openmars/internal/action/query"
+	resconvAction "openmars/internal/action/resource_conversion"
+	stdprojAction "openmars/internal/action/standard_project"
+	tileAction "openmars/internal/action/tile"
+	turnAction "openmars/internal/action/turn_management"
+	"openmars/internal/delivery/dto"
+	httpHandler "openmars/internal/delivery/http"
+	"openmars/internal/delivery/web"
+	wsHandler "openmars/internal/delivery/websocket"
+	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/game"
+	"openmars/internal/game/award"
+	"openmars/internal/game/board"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/colony"
+	"openmars/internal/game/datastore"
+	msLoader "openmars/internal/game/milestone"
+	pfLoader "openmars/internal/game/projectfunding"
+	"openmars/internal/game/shared"
+	stdprojLoader "openmars/internal/game/standardproject"
+	"openmars/internal/logger"
+	httpmiddleware "openmars/internal/middleware/http"
+	"openmars/internal/service/bot"
+	"openmars/internal/service/bugreport"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -56,14 +56,14 @@ var serverAliasPattern = regexp.MustCompile(`^[a-z0-9-]+$`)
 
 // loadServerMeta reads the identity a gateway uses to list and verify this server.
 func loadServerMeta() (dto.MetaResponse, error) {
-	alias := os.Getenv("TM_SERVER_ALIAS")
+	alias := os.Getenv("OPENMARS_SERVER_ALIAS")
 	if alias == "" {
 		alias = "local"
 	}
 	if !serverAliasPattern.MatchString(alias) {
-		return dto.MetaResponse{}, fmt.Errorf("TM_SERVER_ALIAS %q must match %s", alias, serverAliasPattern)
+		return dto.MetaResponse{}, fmt.Errorf("OPENMARS_SERVER_ALIAS %q must match %s", alias, serverAliasPattern)
 	}
-	name := os.Getenv("TM_SERVER_NAME")
+	name := os.Getenv("OPENMARS_SERVER_NAME")
 	if name == "" {
 		name = alias
 	}
@@ -74,7 +74,7 @@ func main() {
 	// Load env from dev.env if present (does not override existing env vars)
 	_ = godotenv.Load("dev.env")
 
-	logLevel := os.Getenv("TM_LOG_LEVEL")
+	logLevel := os.Getenv("OPENMARS_LOG_LEVEL")
 	if logLevel == "" {
 		logLevel = "info"
 	}
@@ -90,15 +90,15 @@ func main() {
 	}()
 
 	log := logger.Get()
-	log.Info("Starting Terraforming Mars backend server")
+	log.Info("Starting Open Mars backend server")
 	log.Info("Version: " + Version)
 	log.Debug("Log level set to " + logLevel)
 
-	addr := os.Getenv("TM_ADDR")
+	addr := os.Getenv("OPENMARS_ADDR")
 	if addr == "" {
 		addr = ":3001"
 	}
-	webDir := os.Getenv("TM_WEB_DIR")
+	webDir := os.Getenv("OPENMARS_WEB_DIR")
 	if webDir == "" {
 		webDir = "web"
 	}
@@ -122,7 +122,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	cardPath := filepath.Join(wd, "assets", "terraforming_mars_cards.json")
+	cardPath := filepath.Join(wd, "assets", "cards.json")
 	log.Debug("Loading cards from", slog.String("path", cardPath))
 
 	cardData, err := cards.LoadCardsFromJSON(cardPath)
@@ -134,7 +134,7 @@ func main() {
 	log.Debug("Card registry initialized", slog.Int("card_count", len(cardData)))
 
 	// ========== Initialize Colony Registry ==========
-	colonyPath := filepath.Join(wd, "assets", "terraforming_mars_colonies.json")
+	colonyPath := filepath.Join(wd, "assets", "colonies.json")
 	log.Debug("Loading colonies from", slog.String("path", colonyPath))
 
 	colonyData, err := colony.LoadColoniesFromJSON(colonyPath)
@@ -146,7 +146,7 @@ func main() {
 	log.Debug("Colony registry initialized", slog.Int("colony_count", len(colonyData)))
 
 	// ========== Initialize Project Funding Registry ==========
-	pfPath := filepath.Join(wd, "assets", "terraforming_mars_project_funding.json")
+	pfPath := filepath.Join(wd, "assets", "project_funding.json")
 	log.Debug("Loading project funding from", slog.String("path", pfPath))
 
 	pfData, err := pfLoader.LoadProjectsFromJSON(pfPath)
@@ -158,7 +158,7 @@ func main() {
 	log.Debug("Project funding registry initialized", slog.Int("project_count", len(pfData)))
 
 	// ========== Initialize Standard Project Registry ==========
-	stdProjPath := filepath.Join(wd, "assets", "terraforming_mars_standard_projects.json")
+	stdProjPath := filepath.Join(wd, "assets", "standard_projects.json")
 	log.Debug("Loading standard projects from", slog.String("path", stdProjPath))
 
 	stdProjData, err := stdprojLoader.LoadStandardProjectsFromJSON(stdProjPath)
@@ -170,7 +170,7 @@ func main() {
 	log.Debug("Standard project registry initialized", slog.Int("project_count", len(stdProjData)))
 
 	// ========== Initialize Award Registry ==========
-	awardPath := filepath.Join(wd, "assets", "terraforming_mars_awards.json")
+	awardPath := filepath.Join(wd, "assets", "awards.json")
 	log.Debug("Loading awards from", slog.String("path", awardPath))
 
 	awardData, err := award.LoadAwardsFromJSON(awardPath)
@@ -182,7 +182,7 @@ func main() {
 	log.Debug("Award registry initialized", slog.Int("award_count", len(awardData)))
 
 	// ========== Initialize Milestone Registry ==========
-	milestonePath := filepath.Join(wd, "assets", "terraforming_mars_milestones.json")
+	milestonePath := filepath.Join(wd, "assets", "milestones.json")
 	log.Debug("Loading milestones from", slog.String("path", milestonePath))
 
 	milestoneData, err := msLoader.LoadMilestonesFromJSON(milestonePath)
@@ -194,7 +194,7 @@ func main() {
 	log.Debug("Milestone registry initialized", slog.Int("milestone_count", len(milestoneData)))
 
 	// ========== Initialize Map Registry ==========
-	mapPath := filepath.Join(wd, "assets", "terraforming_mars_maps.json")
+	mapPath := filepath.Join(wd, "assets", "maps.json")
 	log.Debug("Loading maps from", slog.String("path", mapPath))
 
 	mapRegistry, err := board.LoadMapsFromJSON(mapPath)

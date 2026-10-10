@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"log/slog"
 
-	pfAction "terraforming-mars-backend/internal/action/projectfunding"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/logger"
+	pfAction "openmars/internal/action/projectfunding"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/logger"
 )
 
 // Broadcaster is the interface for broadcasting game state

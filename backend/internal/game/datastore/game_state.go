@@ -3,10 +3,10 @@ package datastore
 import (
 	"time"
 
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/colony"
-	"terraforming-mars-backend/internal/game/projectfunding"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/board"
+	"openmars/internal/game/colony"
+	"openmars/internal/game/projectfunding"
+	"openmars/internal/game/shared"
 )
 
 // GameState holds all game data.

@@ -257,7 +257,7 @@ const LobbySettingsOverlay: React.FC<LobbySettingsOverlayProps> = ({
                 </div>
                 <div className="bg-yellow-900/30 border border-yellow-600/40 rounded-lg p-3 text-yellow-200/90 text-xs leading-relaxed">
                   Bots consume Claude usage that bills against your account. Bots switch to a simple
-                  autopilot if the spend cap or your usage limit is hit. Terraforming Mars CE is not
+                  autopilot if the spend cap or your usage limit is hit. Open Mars is not
                   responsible for charges incurred while running bots.
                 </div>
               </div>

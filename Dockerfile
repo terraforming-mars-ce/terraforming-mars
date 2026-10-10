@@ -62,7 +62,7 @@ COPY backend/cmd/ /repo/backend/cmd/
 COPY backend/assets/ /repo/backend/assets/
 COPY frontend/src/ /repo/frontend/src/
 
-ENV TM_REPO_PATH=/repo
+ENV OPENMARS_REPO_PATH=/repo
 ENV SHELL=/bin/bash
 
 RUN chown -R appuser:appuser /app /repo
@@ -71,6 +71,6 @@ USER appuser
 EXPOSE 3001
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD addr="${TM_ADDR:-:3001}"; wget --quiet --tries=1 --output-document=/dev/null "http://localhost:${addr##*:}/api/v1/health" || exit 1
+    CMD addr="${OPENMARS_ADDR:-:3001}"; wget --quiet --tries=1 --output-document=/dev/null "http://localhost:${addr##*:}/api/v1/health" || exit 1
 
 CMD ["./server"]

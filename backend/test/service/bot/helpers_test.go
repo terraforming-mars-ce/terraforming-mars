@@ -10,18 +10,18 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	gameaction "terraforming-mars-backend/internal/action/game"
-	milestoneAction "terraforming-mars-backend/internal/action/milestone"
-	stdprojAction "terraforming-mars-backend/internal/action/standard_project"
-	tileAction "terraforming-mars-backend/internal/action/tile"
-	turnAction "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game"
-	playerPkg "terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/game/standardproject"
-	"terraforming-mars-backend/internal/service/bot"
-	"terraforming-mars-backend/test/testutil"
+	gameaction "openmars/internal/action/game"
+	milestoneAction "openmars/internal/action/milestone"
+	stdprojAction "openmars/internal/action/standard_project"
+	tileAction "openmars/internal/action/tile"
+	turnAction "openmars/internal/action/turn_management"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/game"
+	playerPkg "openmars/internal/game/player"
+	"openmars/internal/game/shared"
+	"openmars/internal/game/standardproject"
+	"openmars/internal/service/bot"
+	"openmars/test/testutil"
 )
 
 // serialExecutor stands in for the hub: it runs one function at a time.
@@ -53,7 +53,7 @@ type botFixture struct {
 func loadStandardProjects(t *testing.T) standardproject.StandardProjectRegistry {
 	t.Helper()
 	_, currentFile, _, _ := runtime.Caller(0)
-	path := filepath.Join(filepath.Dir(currentFile), "..", "..", "..", "assets", "terraforming_mars_standard_projects.json")
+	path := filepath.Join(filepath.Dir(currentFile), "..", "..", "..", "assets", "standard_projects.json")
 	data, err := standardproject.LoadStandardProjectsFromJSON(path)
 	testutil.AssertNoError(t, err, "standard projects should load")
 	return standardproject.NewInMemoryStandardProjectRegistry(data)

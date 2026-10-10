@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	gameAction "terraforming-mars-backend/internal/action/game"
-	turnAction "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	gameAction "openmars/internal/action/game"
+	turnAction "openmars/internal/action/turn_management"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 
 	"github.com/google/uuid"
 )

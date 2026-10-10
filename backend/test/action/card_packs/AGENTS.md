@@ -10,5 +10,5 @@ Tests are organized by the card's `pack` field in the card database JSON.
 ## Rules
 
 - All card tests go in the file matching their card pack. Do not create standalone files for individual cards.
-- Check the card's `pack` field in `backend/assets/terraforming_mars_cards.json` to determine the correct file.
+- Check the card's `pack` field in `backend/assets/cards.json` to determine the correct file.
 - All files use package `card_packs_test`.

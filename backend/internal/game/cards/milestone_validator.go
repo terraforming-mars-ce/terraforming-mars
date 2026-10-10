@@ -1,10 +1,10 @@
 package cards
 
 import (
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/milestone"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/board"
+	"openmars/internal/game/milestone"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // CalculateMilestoneProgress returns the current progress for a player towards a milestone

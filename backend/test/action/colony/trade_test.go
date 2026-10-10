@@ -3,20 +3,20 @@ package colony_test
 import (
 	"context"
 	"fmt"
+	baseaction "openmars/internal/action"
+	confirmAction "openmars/internal/action/confirmation"
+	"openmars/internal/action/turn_management"
+	"openmars/internal/delivery/dto"
 	"reflect"
-	baseaction "terraforming-mars-backend/internal/action"
-	confirmAction "terraforming-mars-backend/internal/action/confirmation"
-	"terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/delivery/dto"
 	"testing"
 
-	colonyAction "terraforming-mars-backend/internal/action/colony"
-	"terraforming-mars-backend/internal/game"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/colony"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	colonyAction "openmars/internal/action/colony"
+	"openmars/internal/game"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/colony"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func firstColonyResourceFromQueue(p *player.Player) *shared.PendingColonyResourceSelection {
@@ -31,7 +31,7 @@ func setupColonyGame(t *testing.T) (*game.Game, game.GameRepository, colony.Colo
 	t.Helper()
 	testGame, repo, cardRegistry, player1, player2 := testutil.SetupTwoPlayerGame(t)
 
-	colonyDefs, err := colony.LoadColoniesFromJSON("../../../assets/terraforming_mars_colonies.json")
+	colonyDefs, err := colony.LoadColoniesFromJSON("../../../assets/colonies.json")
 	if err != nil {
 		t.Fatalf("Failed to load colonies: %v", err)
 	}

@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
+	"openmars/internal/action"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
 )
 
 type paymentQuoteHandler struct{ broadcaster *Broadcaster }

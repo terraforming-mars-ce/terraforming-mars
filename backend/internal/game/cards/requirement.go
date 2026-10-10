@@ -1,7 +1,7 @@
 package cards
 
 import (
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/shared"
 )
 
 // RequirementType represents different types of card requirements

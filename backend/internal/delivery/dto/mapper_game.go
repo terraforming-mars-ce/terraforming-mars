@@ -6,17 +6,17 @@ import (
 
 	"slices"
 
-	"terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/award"
-	"terraforming-mars-backend/internal/game/board"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/colony"
-	"terraforming-mars-backend/internal/game/milestone"
-	"terraforming-mars-backend/internal/game/player"
-	pfDomain "terraforming-mars-backend/internal/game/projectfunding"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/game/standardproject"
+	"openmars/internal/action"
+	"openmars/internal/game"
+	"openmars/internal/game/award"
+	"openmars/internal/game/board"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/colony"
+	"openmars/internal/game/milestone"
+	"openmars/internal/game/player"
+	pfDomain "openmars/internal/game/projectfunding"
+	"openmars/internal/game/shared"
+	"openmars/internal/game/standardproject"
 )
 
 // ToGameDto converts Game to GameDto with personalized view

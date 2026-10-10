@@ -6,7 +6,7 @@ The Dockerfile expects to be built from the repo root. The game's art and audio 
 
 ```bash
 git lfs pull
-docker build -t terraforming-mars .
+docker build -t openmars .
 ```
 
 ## Running the game
@@ -14,7 +14,7 @@ docker build -t terraforming-mars .
 Minimal setup -- just the game, no bug reporting:
 
 ```bash
-docker run -d --name terraforming-mars -p 3001:3001 terraforming-mars
+docker run -d --name openmars -p 3001:3001 openmars
 ```
 
 Or use the example compose file in this directory:
@@ -30,7 +30,7 @@ Game is at `http://localhost:3001`. The same server answers the page, the API an
 The GitHub App private key should be bind-mounted into the container as a file, not passed as an env var. The `:ro` flag makes it read-only inside the container.
 
 ```bash
-docker run -d --name terraforming-mars \
+docker run -d --name openmars \
   -p 3001:3001 \
   -v /path/to/private-key.pem:/etc/secrets/github/private-key.pem:ro \
   -e GITHUB_APP_ID=<app-id> \
@@ -39,7 +39,7 @@ docker run -d --name terraforming-mars \
   -e GITHUB_REPO_OWNER=<owner> \
   -e GITHUB_REPO_NAME=<repo> \
   -e CLAUDE_CODE_OAUTH_TOKEN=<token> \
-  terraforming-mars
+  openmars
 ```
 
 If you're on Fedora or another SELinux system, you may need `:z` instead of `:ro` on the volume mount so the container process can actually read the file.

@@ -4,10 +4,10 @@ import (
 	"strings"
 	"testing"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/service/bot"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/game"
+	"openmars/internal/service/bot"
+	"openmars/test/testutil"
 )
 
 func TestSummarizeGameState_ShowsWhatTheBotNeeds(t *testing.T) {

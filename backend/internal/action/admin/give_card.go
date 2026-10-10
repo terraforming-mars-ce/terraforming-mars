@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/cards"
+	"openmars/internal/game"
+	"openmars/internal/game/cards"
 )
 
 // GiveCardAction handles the admin action to give a card to a player

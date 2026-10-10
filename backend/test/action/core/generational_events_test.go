@@ -5,14 +5,14 @@ import (
 	"testing"
 	"time"
 
-	"terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/datastore"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/logger"
+	"openmars/internal/action"
+	"openmars/internal/events"
+	"openmars/internal/game"
+	"openmars/internal/game/board"
+	"openmars/internal/game/datastore"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
+	"openmars/internal/logger"
 )
 
 func setupGenerationalEventsTestEnvironment(t *testing.T) (*game.Game, *player.Player) {

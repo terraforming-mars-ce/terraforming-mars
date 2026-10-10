@@ -3,10 +3,10 @@ package cards
 import (
 	"fmt"
 	"github.com/google/uuid"
+	"openmars/internal/game"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 	"slices"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
 )
 
 // ResourceRemovalTargets returns the current removable amount for each eligible player.

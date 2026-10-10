@@ -6,11 +6,11 @@ import (
 	"log/slog"
 	"slices"
 
-	baseaction "terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/game"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/milestone"
-	"terraforming-mars-backend/internal/game/shared"
+	baseaction "openmars/internal/action"
+	"openmars/internal/game"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/milestone"
+	"openmars/internal/game/shared"
 )
 
 // ClaimMilestoneAction handles the business logic for claiming a milestone

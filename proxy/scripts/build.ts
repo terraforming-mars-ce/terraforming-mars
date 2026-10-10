@@ -8,7 +8,7 @@ export const outDir = join(root, "dist");
 /**
  * Builds the gateway into dist/: the hashed loader, the shell page that loads
  * it, and the app icons, Orbitron fonts and manifest shared with the game frontend.
- * servers.js is written at startup from TM_SERVERS, not here.
+ * servers.js is written at startup from OPENMARS_SERVERS, not here.
  */
 export async function build(): Promise<void> {
   await rm(outDir, { recursive: true, force: true });

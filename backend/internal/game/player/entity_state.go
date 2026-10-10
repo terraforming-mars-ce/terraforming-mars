@@ -1,7 +1,7 @@
 package player
 
 import (
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/shared"
 	"time"
 )
 

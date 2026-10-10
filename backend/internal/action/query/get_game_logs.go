@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"terraforming-mars-backend/internal/game"
+	"openmars/internal/game"
 )
 
 // GetGameLogsAction handles querying game state diff logs

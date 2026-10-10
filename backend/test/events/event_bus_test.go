@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"terraforming-mars-backend/internal/events"
+	"openmars/internal/events"
 )
 
 // TestEventBusSubscribeAndPublish tests basic subscribe and publish functionality

@@ -6,17 +6,17 @@ import (
 	"runtime"
 	"testing"
 
-	"terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/award"
-	"terraforming-mars-backend/internal/game/board"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/datastore"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/game/standardproject"
-	"terraforming-mars-backend/internal/logger"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/action"
+	"openmars/internal/game"
+	"openmars/internal/game/award"
+	"openmars/internal/game/board"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/datastore"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
+	"openmars/internal/game/standardproject"
+	"openmars/internal/logger"
+	"openmars/test/testutil"
 )
 
 // loadStandardProjectRegistry571 loads the real standard-project registry from the
@@ -24,7 +24,7 @@ import (
 func loadStandardProjectRegistry571(t *testing.T) standardproject.StandardProjectRegistry {
 	t.Helper()
 	_, currentFile, _, _ := runtime.Caller(0)
-	stdProjPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "..", "assets", "terraforming_mars_standard_projects.json")
+	stdProjPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "..", "assets", "standard_projects.json")
 	stdProjData, err := standardproject.LoadStandardProjectsFromJSON(stdProjPath)
 	if err != nil {
 		t.Fatalf("Failed to load standard projects JSON: %v", err)

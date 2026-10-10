@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/action"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // =============================================================================

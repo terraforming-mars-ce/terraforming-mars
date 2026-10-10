@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	cardAction "terraforming-mars-backend/internal/action/card"
-	tileAction "terraforming-mars-backend/internal/action/tile"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	cardAction "openmars/internal/action/card"
+	tileAction "openmars/internal/action/tile"
+	"openmars/internal/game"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // --- Nuke (EXP004) ---

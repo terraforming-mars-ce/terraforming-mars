@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/events"
+	"openmars/internal/game/shared"
 )
 
 // Tile type string constants for placement operations

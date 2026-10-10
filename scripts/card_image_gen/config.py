@@ -14,7 +14,7 @@ T5XXL_MODEL = "t5xxl_fp8_e4m3fn.safetensors"
 
 # Project paths
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-CARD_JSON_PATH = PROJECT_ROOT / "backend" / "assets" / "terraforming_mars_cards.json"
+CARD_JSON_PATH = PROJECT_ROOT / "backend" / "assets" / "cards.json"
 OUTPUT_DIR = PROJECT_ROOT / "assets" / "original" / "cards"
 CATALOG_PATH = PROJECT_ROOT / "assets" / "catalog.json"
 

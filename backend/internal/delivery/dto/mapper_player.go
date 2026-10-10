@@ -1,14 +1,14 @@
 package dto
 
 import (
-	"terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/award"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/milestone"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/game/standardproject"
+	"openmars/internal/action"
+	"openmars/internal/game"
+	"openmars/internal/game/award"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/milestone"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
+	"openmars/internal/game/standardproject"
 )
 
 // toResourcesDto converts shared.Resources to ResourcesDto.

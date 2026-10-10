@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Digital implementation of Terraforming Mars board game with real-time multiplayer and 3D game view. WebSocket multiplayer with Go backend and React frontend.
+Open Mars is a digital implementation of the Terraforming Mars board game with real-time multiplayer and 3D game view. WebSocket multiplayer with Go backend and React frontend.
 
 ## Commands
 

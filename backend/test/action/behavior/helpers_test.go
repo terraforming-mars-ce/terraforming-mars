@@ -6,11 +6,11 @@ import (
 	"log/slog"
 	"testing"
 
-	"terraforming-mars-backend/internal/game"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/game"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // applyOutputs applies outputs directly via BehaviorApplier without card play.

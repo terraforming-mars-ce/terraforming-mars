@@ -1,11 +1,11 @@
 /**
- * TabManager handles multi-tab prevention for the Terraforming Mars game.
+ * TabManager handles multi-tab prevention for Open Mars.
  * Ensures only one tab can have an active game session at a time.
  */
 
 import { serverScopedKey } from "./gateway.ts";
 
-const TAB_STORAGE_KEY_PREFIX = serverScopedKey("terraforming-mars-active-tab");
+const TAB_STORAGE_KEY_PREFIX = serverScopedKey("openmars.activeTab");
 const HEARTBEAT_INTERVAL = 5000; // 5 seconds
 const TAB_TIMEOUT = 10000; // 10 seconds
 
@@ -115,7 +115,7 @@ export class TabManager {
     if (!this.playerName) return null;
 
     try {
-      const key = `${TAB_STORAGE_KEY_PREFIX}-${this.playerName}`;
+      const key = `${TAB_STORAGE_KEY_PREFIX}.${this.playerName}`;
       const stored = localStorage.getItem(key);
       return stored ? JSON.parse(stored) : null;
     } catch {
@@ -133,7 +133,7 @@ export class TabManager {
       playerName: this.playerName,
     };
 
-    const key = `${TAB_STORAGE_KEY_PREFIX}-${this.playerName}`;
+    const key = `${TAB_STORAGE_KEY_PREFIX}.${this.playerName}`;
     localStorage.setItem(key, JSON.stringify(tabState));
   }
 
@@ -142,7 +142,7 @@ export class TabManager {
 
     const activeTab = this.getActiveTab();
     if (activeTab?.tabId === this.tabId) {
-      const key = `${TAB_STORAGE_KEY_PREFIX}-${this.playerName}`;
+      const key = `${TAB_STORAGE_KEY_PREFIX}.${this.playerName}`;
       localStorage.removeItem(key);
     }
   }
@@ -184,7 +184,7 @@ export class TabManager {
     });
 
     window.addEventListener("storage", (event) => {
-      const expectedKey = this.playerName ? `${TAB_STORAGE_KEY_PREFIX}-${this.playerName}` : null;
+      const expectedKey = this.playerName ? `${TAB_STORAGE_KEY_PREFIX}.${this.playerName}` : null;
 
       if (event.key === expectedKey && this.isActive) {
         const newTabState = event.newValue ? JSON.parse(event.newValue) : null;

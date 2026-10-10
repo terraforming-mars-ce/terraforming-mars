@@ -2,10 +2,10 @@ package cards
 
 import (
 	"fmt"
+	"openmars/internal/game"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 	"slices"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
 )
 
 // EffectSelectionOptions returns legal complete source/target assignments for deferred outputs.

@@ -1,35 +1,35 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: terraforming-mars
+  name: openmars
   labels:
-    app.kubernetes.io/name: terraforming-mars
+    app.kubernetes.io/name: openmars
     app.kubernetes.io/component: app
-    app.kubernetes.io/part-of: terraforming-mars
+    app.kubernetes.io/part-of: openmars
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: terraforming-mars
+      app.kubernetes.io/name: openmars
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: terraforming-mars
+        app.kubernetes.io/name: openmars
         app.kubernetes.io/component: app
-        app.kubernetes.io/part-of: terraforming-mars
+        app.kubernetes.io/part-of: openmars
     spec:
       imagePullSecrets:
         - name: ghcr-secret
       volumes:
         - name: github-key
           secret:
-            secretName: terraforming-mars-github-app
+            secretName: openmars-github-app
             items:
               - key: private-key
                 path: private-key.pem
       containers:
-        - name: terraforming-mars
-          image: ghcr.io/terraforming-mars-ce/terraforming-mars:latest
+        - name: openmars
+          image: ghcr.io/openmars-app/openmars:latest
           ports:
             - containerPort: 3001
               name: http
@@ -39,9 +39,9 @@ spec:
               readOnly: true
           env:
             # Identity shown by a gateway that fronts several servers (lowercase a-z, 0-9, -)
-            - name: TM_SERVER_ALIAS
+            - name: OPENMARS_SERVER_ALIAS
               value: <alias>
-            - name: TM_SERVER_NAME
+            - name: OPENMARS_SERVER_NAME
               value: <display name>
             - name: GITHUB_APP_ID
               value: "<app-id>"
@@ -56,5 +56,5 @@ spec:
             - name: CLAUDE_CODE_OAUTH_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: terraforming-mars-claude
+                  name: openmars-claude
                   key: oauth-token

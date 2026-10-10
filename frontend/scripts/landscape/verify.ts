@@ -50,7 +50,7 @@ import type { CityStyleRequestDto } from "../../src/types/generated/api-types";
 const coord = (q: number, r = 0) => ({ q, r, s: -q - r });
 const cards = JSON.parse(
   readFileSync(
-    new URL("../../../backend/assets/terraforming_mars_cards.json", import.meta.url),
+    new URL("../../../backend/assets/cards.json", import.meta.url),
     "utf8",
   ),
 ) as { id: string; name: string; style?: { tile: CityStyleRequestDto } }[];

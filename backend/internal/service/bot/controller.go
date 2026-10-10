@@ -9,11 +9,11 @@ import (
 	"sync"
 	"time"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/cards"
-	playerPkg "terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/game"
+	"openmars/internal/game/cards"
+	playerPkg "openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // Broadcaster publishes bot activity to the players.

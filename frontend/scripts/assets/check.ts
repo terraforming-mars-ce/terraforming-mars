@@ -6,7 +6,7 @@ await buildAssets(repoRoot, true);
 const { entries } = await loadCatalog(repoRoot);
 const ids = new Set(entries.map((entry) => entry.id));
 const cards = JSON.parse(
-  await fs.readFile(path.join(repoRoot, "backend/assets/terraforming_mars_cards.json"), "utf8"),
+  await fs.readFile(path.join(repoRoot, "backend/assets/cards.json"), "utf8"),
 ) as Array<{ id: string; name: string; type: string }>;
 for (const card of cards) {
   const key = card.name

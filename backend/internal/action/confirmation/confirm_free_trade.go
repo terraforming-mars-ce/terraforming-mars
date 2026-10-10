@@ -7,13 +7,13 @@ import (
 	"slices"
 	"time"
 
-	baseaction "terraforming-mars-backend/internal/action"
-	colonyaction "terraforming-mars-backend/internal/action/colony"
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/colony"
-	"terraforming-mars-backend/internal/game/shared"
+	baseaction "openmars/internal/action"
+	colonyaction "openmars/internal/action/colony"
+	"openmars/internal/events"
+	"openmars/internal/game"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/colony"
+	"openmars/internal/game/shared"
 )
 
 // ConfirmFreeTradeAction handles confirming a free trade from a card effect

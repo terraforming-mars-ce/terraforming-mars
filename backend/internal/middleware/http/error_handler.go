@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/logger"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/logger"
 )
 
 // Recovery middleware recovers from panics and returns a 500 error

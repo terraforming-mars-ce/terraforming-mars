@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"terraforming-mars-backend/internal/game"
+	"openmars/internal/game"
 )
 
 // SetGlobalParametersRequest contains the parameters to set

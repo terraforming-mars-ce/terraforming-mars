@@ -18,7 +18,7 @@ import (
 
 // MCPServerName is the name the bot's game tool server is registered under in the CLI.
 // Tools appear to the model as mcp__<MCPServerName>__<tool>.
-const MCPServerName = "tm"
+const MCPServerName = "openmars"
 
 // MCPEndpoint is the per-invocation address and credential of the game tool server.
 type MCPEndpoint struct {
@@ -144,7 +144,7 @@ func (r *CLIRunner) Run(ctx context.Context, inv Invocation) (Result, error) {
 		return Result{}, err
 	}
 
-	workDir, err := os.MkdirTemp("", "tm-bot-")
+	workDir, err := os.MkdirTemp("", "openmars-bot-")
 	if err != nil {
 		return Result{}, fmt.Errorf("create bot work dir: %w", err)
 	}

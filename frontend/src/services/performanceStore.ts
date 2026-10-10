@@ -212,18 +212,18 @@ class PerformanceStoreService {
 export const performanceStore = PerformanceStoreService.getInstance();
 
 type TraceDetail = Record<string, unknown>;
-const TRACE_PREFIX = "tm:cold-start";
+const TRACE_PREFIX = "openmars:cold-start";
 const NOOP = () => {};
 
 function traceEnabled() {
   try {
-    return localStorage.getItem("tm:perf-trace") === "1";
+    return localStorage.getItem("openmars.perfTrace") === "1";
   } catch {
     return false;
   }
 }
 
-// Opt in before reloading: localStorage.setItem("tm:perf-trace", "1").
+// Opt in before reloading: localStorage.setItem("openmars.perfTrace", "1").
 class ColdStartTrace {
   readonly enabled = traceEnabled();
   private sequence = 0;

@@ -6,14 +6,14 @@ import (
 	"log/slog"
 	"time"
 
-	baseaction "terraforming-mars-backend/internal/action"
+	baseaction "openmars/internal/action"
 
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/game/standardproject"
+	"openmars/internal/events"
+	"openmars/internal/game"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
+	"openmars/internal/game/standardproject"
 )
 
 // ExecuteStandardProjectAction handles all standard projects via a single unified action

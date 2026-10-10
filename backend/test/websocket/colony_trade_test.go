@@ -3,10 +3,10 @@ package websocket_test
 import (
 	"context"
 	"fmt"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	colonyhandler "terraforming-mars-backend/internal/delivery/websocket/handler/colony"
-	"terraforming-mars-backend/internal/delivery/websocket/handler/confirmation"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
+	colonyhandler "openmars/internal/delivery/websocket/handler/colony"
+	"openmars/internal/delivery/websocket/handler/confirmation"
 	"testing"
 )
 

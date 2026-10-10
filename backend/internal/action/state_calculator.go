@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	"terraforming-mars-backend/internal/game"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/global_parameters"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/global_parameters"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // CalculatePlayerCardState computes playability state for a card.

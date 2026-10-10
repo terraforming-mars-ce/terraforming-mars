@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"sort"
 
-	"terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/action"
+	"openmars/internal/game"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // quotePayment builds a legal payment for an intent. Without preferences the server's

@@ -3,20 +3,20 @@ package card_packs_test
 import (
 	"context"
 	"fmt"
-	baseaction "terraforming-mars-backend/internal/action"
-	colonyAction "terraforming-mars-backend/internal/action/colony"
-	"terraforming-mars-backend/internal/delivery/dto"
+	baseaction "openmars/internal/action"
+	colonyAction "openmars/internal/action/colony"
+	"openmars/internal/delivery/dto"
 	"testing"
 
-	cardAction "terraforming-mars-backend/internal/action/card"
-	confirmAction "terraforming-mars-backend/internal/action/confirmation"
-	"terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/game"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/colony"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	cardAction "openmars/internal/action/card"
+	confirmAction "openmars/internal/action/confirmation"
+	"openmars/internal/action/turn_management"
+	"openmars/internal/game"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/colony"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // =============================================================================
@@ -27,7 +27,7 @@ func setupColoniesGame(t *testing.T) (*game.Game, game.GameRepository, colony.Co
 	t.Helper()
 	testGame, repo, _, player1, player2 := testutil.SetupTwoPlayerGame(t)
 
-	colonyDefs, err := colony.LoadColoniesFromJSON("../../../assets/terraforming_mars_colonies.json")
+	colonyDefs, err := colony.LoadColoniesFromJSON("../../../assets/colonies.json")
 	if err != nil {
 		t.Fatalf("Failed to load colonies: %v", err)
 	}
@@ -68,7 +68,7 @@ func playColonyTestCard(t *testing.T, g *game.Game, repo game.GameRepository, pl
 	testutil.AssertNoError(t, err, "Get player")
 	card := testutil.GetCardByName(name)
 	p.Hand().AddCard(card.ID)
-	defs, err := colony.LoadColoniesFromJSON("../../../assets/terraforming_mars_colonies.json")
+	defs, err := colony.LoadColoniesFromJSON("../../../assets/colonies.json")
 	testutil.AssertNoError(t, err, "Load colony definitions")
 	play := cardAction.NewPlayCardAction(repo, testutil.CreateTestCardRegistry(), nil, testutil.TestLogger(), colony.NewInMemoryColonyRegistry(defs))
 	testutil.AssertNoError(t, play.Execute(context.Background(), g.ID(), playerID, card.ID, shared.NativePayment(shared.ResourceCredit, card.Cost), nil, targets, nil, nil, nil), "Play "+name)

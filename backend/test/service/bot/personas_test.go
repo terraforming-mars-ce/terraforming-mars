@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"testing"
 
-	"terraforming-mars-backend/internal/service/bot"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/service/bot"
+	"openmars/test/testutil"
 )
 
 func TestPersonaCatalog_ShippedCatalogLoads(t *testing.T) {

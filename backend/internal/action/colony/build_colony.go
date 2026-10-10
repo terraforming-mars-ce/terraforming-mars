@@ -7,13 +7,13 @@ import (
 	"slices"
 	"time"
 
-	baseaction "terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/cards"
-	gamecolony "terraforming-mars-backend/internal/game/colony"
-	gameplayer "terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	baseaction "openmars/internal/action"
+	"openmars/internal/events"
+	"openmars/internal/game"
+	"openmars/internal/game/cards"
+	gamecolony "openmars/internal/game/colony"
+	gameplayer "openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 const (

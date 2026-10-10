@@ -1,10 +1,10 @@
-# Deploying Terraforming Mars
+# Deploying Open Mars
 
 One container, a reverse proxy in front. That's it.
 
 ## The container
 
-`ghcr.io/terraforming-mars-ce/terraforming-mars` is one Go server on port 3001. It runs the game logic and the bug report API, holds the WebSocket connections, and serves the React app. Everything is on one origin, so there's nothing to point the frontend at.
+`ghcr.io/openmars-app/openmars` is one Go server on port 3001. It runs the game logic and the bug report API, holds the WebSocket connections, and serves the React app. Everything is on one origin, so there's nothing to point the frontend at.
 
 The image is built from the repo root with the root `Dockerfile`.
 
@@ -18,11 +18,11 @@ WebSocket connections (`/ws`) stay open for the duration of a game, so set proxy
 
 | Variable | Required | Default | What it does |
 |----------|----------|---------|--------------|
-| `TM_LOG_LEVEL` | No | `info` | Log verbosity. Options: `debug`, `info`, `warn`, `error` |
-| `TM_ADDR` | No | `:3001` | Address the server listens on, e.g. `:3000` |
-| `TM_WEB_DIR` | No | `web` | Directory with the built frontend, relative to the working directory. The image has it at `/app/web`. When the directory is missing, only the API is served |
-| `TM_SERVER_ALIAS` | No | `local` | This server's permanent id on a gateway that fronts several servers (lowercase a-z, 0-9, -). It appears in shared links |
-| `TM_SERVER_NAME` | No | the alias | Display name on that gateway, e.g. `EU 1` |
+| `OPENMARS_LOG_LEVEL` | No | `info` | Log verbosity. Options: `debug`, `info`, `warn`, `error` |
+| `OPENMARS_ADDR` | No | `:3001` | Address the server listens on, e.g. `:3000` |
+| `OPENMARS_WEB_DIR` | No | `web` | Directory with the built frontend, relative to the working directory. The image has it at `/app/web`. When the directory is missing, only the API is served |
+| `OPENMARS_SERVER_ALIAS` | No | `local` | This server's permanent id on a gateway that fronts several servers (lowercase a-z, 0-9, -). It appears in shared links |
+| `OPENMARS_SERVER_NAME` | No | the alias | Display name on that gateway, e.g. `EU 1` |
 
 The game works fine without any environment variables. The bug report feature has its own set of optional env vars below.
 
@@ -35,9 +35,9 @@ All optional. Without these, the game runs normally but the in-game bug report b
 | `GITHUB_APP_ID` | No | _(unset)_ | GitHub App ID for creating bug report issues |
 | `GITHUB_INSTALLATION_ID` | No | _(unset)_ | GitHub App installation ID. Without this, bug reporting is disabled entirely |
 | `GITHUB_PRIVATE_KEY_PATH` | No | `./private-key.pem` | Path to the GitHub App private key file. Must be readable inside the container |
-| `GITHUB_REPO_OWNER` | No | `terraforming-mars-ce` | GitHub repo owner where issues get created |
-| `GITHUB_REPO_NAME` | No | `terraforming-mars` | GitHub repo name where issues get created |
-| `TM_REPO_PATH` | No | _(unset)_ | Path to source code for Claude analysis. The Docker image already sets this to `/repo`, so you only need to set it when running locally (e.g. `TM_REPO_PATH=./` from the repo root) |
+| `GITHUB_REPO_OWNER` | No | `openmars-app` | GitHub repo owner where issues get created |
+| `GITHUB_REPO_NAME` | No | `openmars` | GitHub repo name where issues get created |
+| `OPENMARS_REPO_PATH` | No | _(unset)_ | Path to source code for Claude analysis. The Docker image already sets this to `/repo`, so you only need to set it when running locally (e.g. `OPENMARS_REPO_PATH=./` from the repo root) |
 | `CLAUDE_CODE_OAUTH_TOKEN` | No | _(unset)_ | OAuth token for Claude Code CLI. Without this (and without a mounted `~/.claude` directory), Claude analysis is skipped. Bug reports still get created -- they just won't have AI-generated code analysis |
 
 The backend logs which capabilities are active on startup:
@@ -55,7 +55,7 @@ The bug report feature has two independent capabilities that degrade gracefully:
 | Capability | What you need | What happens without it |
 |------------|---------------|------------------------|
 | **GitHub App** | `GITHUB_INSTALLATION_ID` + private key file | Bug reporting is completely disabled. The UI shows "not available" |
-| **Claude** | `CLAUDE_CODE_OAUTH_TOKEN` + `TM_REPO_PATH` pointing to source code | Bug reports still get created, but without AI analysis. The issue body has the player's description and game state, but no code-level analysis |
+| **Claude** | `CLAUDE_CODE_OAUTH_TOKEN` + `OPENMARS_REPO_PATH` pointing to source code | Bug reports still get created, but without AI analysis. The issue body has the player's description and game state, but no code-level analysis |
 
 To get the OAuth token, run `claude setup-token` on any machine with Claude Code installed. It gives you a long-lived token (valid for about a year).
 

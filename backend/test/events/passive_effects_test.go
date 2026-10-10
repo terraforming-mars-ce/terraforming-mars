@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/events"
+	"openmars/test/testutil"
 )
 
 // TestPassiveEffects_EventSubscription tests that passive effects can subscribe to events

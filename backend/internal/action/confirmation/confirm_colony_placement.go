@@ -6,13 +6,13 @@ import (
 	"log/slog"
 	"slices"
 
-	baseaction "terraforming-mars-backend/internal/action"
-	colonyaction "terraforming-mars-backend/internal/action/colony"
-	"terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/colony"
-	"terraforming-mars-backend/internal/game/shared"
+	baseaction "openmars/internal/action"
+	colonyaction "openmars/internal/action/colony"
+	"openmars/internal/action/turn_management"
+	"openmars/internal/game"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/colony"
+	"openmars/internal/game/shared"
 )
 
 // ConfirmColonyPlacementAction handles confirming a colony placement from a card effect

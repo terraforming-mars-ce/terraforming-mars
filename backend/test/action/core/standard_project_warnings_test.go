@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/game/global_parameters"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/action"
+	"openmars/internal/game/global_parameters"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // TestStandardProject_AsteroidWarnsWhenTemperatureMaxed verifies a warning is returned

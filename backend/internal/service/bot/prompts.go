@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/game/shared"
 )
 
 // LoadStrategyGuide reads the bot strategy guide.

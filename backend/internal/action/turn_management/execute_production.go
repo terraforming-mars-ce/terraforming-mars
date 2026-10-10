@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	"terraforming-mars-backend/internal/game"
-	playerPkg "terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	playerPkg "openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // ExecuteProductionPhase handles the production phase when all players have passed.

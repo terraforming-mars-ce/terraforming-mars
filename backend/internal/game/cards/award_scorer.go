@@ -3,9 +3,9 @@ package cards
 import (
 	"sort"
 
-	"terraforming-mars-backend/internal/game/award"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/player"
+	"openmars/internal/game/award"
+	"openmars/internal/game/board"
+	"openmars/internal/game/player"
 )
 
 // AwardPlacement represents a player's placement in an award

@@ -3,9 +3,9 @@ package cards
 import (
 	"context"
 	"fmt"
+	"openmars/internal/game"
+	"openmars/internal/game/shared"
 	"strings"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/shared"
 )
 
 // ValidateRevealOutputs performs all reveal preconditions before inputs are charged.

@@ -2,11 +2,11 @@ package action
 
 import (
 	"log/slog"
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/logger"
+	"openmars/internal/events"
+	"openmars/internal/game"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/player"
+	"openmars/internal/logger"
 )
 
 // SetupPlayerCardStore wires event-driven state calculation for a player's hand cards.

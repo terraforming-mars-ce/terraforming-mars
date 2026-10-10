@@ -3,8 +3,8 @@ package projectfunding_test
 import (
 	"testing"
 
-	pfLoader "terraforming-mars-backend/internal/game/projectfunding"
-	"terraforming-mars-backend/test/testutil"
+	pfLoader "openmars/internal/game/projectfunding"
+	"openmars/test/testutil"
 )
 
 func TestRegistry_GetByID_Found(t *testing.T) {

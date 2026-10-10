@@ -4,8 +4,8 @@ import (
 	"log/slog"
 	"time"
 
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game/datastore"
+	"openmars/internal/events"
+	"openmars/internal/game/datastore"
 )
 
 // PlayedCards manages all cards a player has played.

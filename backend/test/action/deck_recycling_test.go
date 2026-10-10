@@ -5,12 +5,12 @@ import (
 	"slices"
 	"testing"
 
-	"terraforming-mars-backend/internal/action/confirmation"
-	"terraforming-mars-backend/internal/action/turn_management"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/deck"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/action/confirmation"
+	"openmars/internal/action/turn_management"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/deck"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func TestDeckRecycling_UnselectedCardsFromCardDraw(t *testing.T) {

@@ -2,14 +2,14 @@ package card_packs_test
 
 import (
 	"context"
+	"openmars/internal/action/admin"
+	gamecards "openmars/internal/game/cards"
 	"slices"
-	"terraforming-mars-backend/internal/action/admin"
-	gamecards "terraforming-mars-backend/internal/game/cards"
 	"testing"
 
-	cardAction "terraforming-mars-backend/internal/action/card"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	cardAction "openmars/internal/action/card"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // =============================================================================

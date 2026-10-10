@@ -69,7 +69,7 @@ All types share: `type`, `amount`, `target`.
 
 ## Adding New Cards
 
-1. Add card JSON to `terraforming_mars_cards.json`
+1. Add card JSON to `cards.json`
 2. Use existing output types and fields from the table above
 3. Run `just test` — the validation test checks all field combinations are valid
 4. For new resource types, see `internal/game/shared/CLAUDE.md` for how to add a category

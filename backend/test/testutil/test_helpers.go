@@ -10,15 +10,15 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"terraforming-mars-backend/internal/action"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/award"
-	"terraforming-mars-backend/internal/game/board"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/datastore"
-	"terraforming-mars-backend/internal/game/milestone"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/logger"
+	"openmars/internal/action"
+	"openmars/internal/game"
+	"openmars/internal/game/award"
+	"openmars/internal/game/board"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/datastore"
+	"openmars/internal/game/milestone"
+	"openmars/internal/game/shared"
+	"openmars/internal/logger"
 )
 
 // TestContext provides a reusable test context
@@ -65,7 +65,7 @@ func CreateTestCardRegistry() gamecards.CardRegistry {
 // CreateTestAwardRegistry returns an award registry loaded from the JSON database.
 func CreateTestAwardRegistry() award.AwardRegistry {
 	_, currentFile, _, _ := runtime.Caller(0)
-	jsonPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "assets", "terraforming_mars_awards.json")
+	jsonPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "assets", "awards.json")
 	awardList, err := award.LoadAwardsFromJSON(jsonPath)
 	if err != nil {
 		panic(fmt.Sprintf("failed to load award DB for tests: %v", err))
@@ -76,7 +76,7 @@ func CreateTestAwardRegistry() award.AwardRegistry {
 // CreateTestMilestoneRegistry returns a milestone registry loaded from the JSON database.
 func CreateTestMilestoneRegistry() milestone.MilestoneRegistry {
 	_, currentFile, _, _ := runtime.Caller(0)
-	jsonPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "assets", "terraforming_mars_milestones.json")
+	jsonPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "assets", "milestones.json")
 	milestoneList, err := milestone.LoadMilestonesFromJSON(jsonPath)
 	if err != nil {
 		panic(fmt.Sprintf("failed to load milestone DB for tests: %v", err))
@@ -304,7 +304,7 @@ func ResourceTypePtr(v shared.ResourceType) *shared.ResourceType { return &v }
 // CreateTestMapRegistry returns a MapRegistry loaded from the JSON database.
 func CreateTestMapRegistry() *board.MapRegistry {
 	_, currentFile, _, _ := runtime.Caller(0)
-	jsonPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "assets", "terraforming_mars_maps.json")
+	jsonPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "assets", "maps.json")
 	registry, err := board.LoadMapsFromJSON(jsonPath)
 	if err != nil {
 		panic(fmt.Sprintf("failed to load map DB for tests: %v", err))

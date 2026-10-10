@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/game"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // Snapshot is the game as one bot sees it at one moment.

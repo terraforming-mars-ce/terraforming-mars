@@ -2,9 +2,9 @@ package cards
 
 import (
 	"fmt"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // WithTriggeringCard retains the event card independently of the effect source.

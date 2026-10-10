@@ -1,4 +1,4 @@
-# Backend - Terraforming Mars API Server
+# Backend - Open Mars API Server
 
 This document provides guidance for working with the backend API server.
 

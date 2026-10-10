@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	adminAction "terraforming-mars-backend/internal/action/admin"
-	gameAction "terraforming-mars-backend/internal/action/game"
-	turnAction "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	adminAction "openmars/internal/action/admin"
+	gameAction "openmars/internal/action/game"
+	turnAction "openmars/internal/action/turn_management"
+	"openmars/internal/game"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 type stopRecorder struct {

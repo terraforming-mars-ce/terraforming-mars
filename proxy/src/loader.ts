@@ -5,10 +5,10 @@ import { defaultOrder, selectServer } from "./select.ts";
 import type { MetaResponse, ServerEntry } from "./servers.ts";
 
 // Loader keys never collide with the game's own storage keys on this origin
-const TAB_KEY = "tm.gateway.tab";
-const CHOICE_KEY = "tm.gateway.choice";
+const TAB_KEY = "openmars.gateway.tab";
+const CHOICE_KEY = "openmars.gateway.choice";
 
-const servers = window.__TM_SERVERS__ ?? [];
+const servers = window.__OPENMARS_SERVERS__ ?? [];
 
 function read(storage: Storage, key: string): string | null {
   try {

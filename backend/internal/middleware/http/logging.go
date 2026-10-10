@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"terraforming-mars-backend/internal/logger"
+	"openmars/internal/logger"
 )
 
 // responseWriter wraps http.ResponseWriter to capture status code

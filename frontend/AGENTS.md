@@ -1,4 +1,4 @@
-# Frontend - Terraforming Mars Game UI
+# Frontend - Open Mars Game UI
 
 React frontend with 3D Mars visualization using Three.js/React Three Fiber. Real-time multiplayer via WebSocket state synchronization from Go backend.
 
@@ -234,7 +234,7 @@ Phones get a separate "compact" layout. Keep it working whenever you touch UI co
 - **Graphics tier**: `GRAPHICS` from `utils/graphicsQuality.ts` is `low` on phones (override with `?gfx=low|high`); low tier means smaller textures, fewer particles and no EXR skybox. Pause rendering with `useRenderPause(reason, active)` from `stores/renderPauseStore.ts` while something covers the canvas.
 - **Sizes**: touch targets at least 44×44px, text inputs at least 16px (prevents iOS focus zoom), text at least 11px, and `dvh` for anything viewport-tall (never `vh` or `h-screen`).
 - **Testing**: append `?compact` to any URL, or use DevTools device emulation in landscape. `tests/mobile-*.spec.ts` check this automatically (see "Testing with Playwright").
-- **Install bar**: `InstallAppBar` offers "Play full screen as an app" on the compact landing page 2s after load; "Not now" hides it for 30 days (`tm.installBar.dismissedUntil` in `localStorage`). `utils/installApp.ts` keeps Chromium's `beforeinstallprompt` (registered from `index.jsx`) and picks the install path: the real prompt, or the how-to sheet (`InstallHowToSheet`) on iOS and Firefox Android. The menus show "Install app" whenever installing is possible.
+- **Install bar**: `InstallAppBar` offers "Play full screen as an app" on the compact landing page 2s after load; "Not now" hides it for 30 days (`openmars.installBar.dismissedUntil` in `localStorage`). `utils/installApp.ts` keeps Chromium's `beforeinstallprompt` (registered from `index.jsx`) and picks the install path: the real prompt, or the how-to sheet (`InstallHowToSheet`) on iOS and Firefox Android. The menus show "Install app" whenever installing is possible.
 - **Testing install**: Chrome only offers install on HTTPS or `localhost`. On an Android phone, run `adb reverse tcp:3000 tcp:3000` and open `http://localhost:3000`, or allow the dev origin with `chrome://flags/#unsafely-treat-insecure-origin-as-secure`. iOS Add to Home Screen works over plain HTTP. Clear site data to bring a dismissed bar back.
 
 

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	gamePkg "terraforming-mars-backend/internal/game"
-	playerPkg "terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	gamePkg "openmars/internal/game"
+	playerPkg "openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // BotStarter starts a bot session for a player.

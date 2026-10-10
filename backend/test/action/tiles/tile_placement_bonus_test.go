@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"testing"
 
-	tileAction "terraforming-mars-backend/internal/action/tile"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	tileAction "openmars/internal/action/tile"
+	"openmars/internal/game"
+	"openmars/internal/game/board"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func TestSelectTileAction_BonusesRemovedAfterClaim(t *testing.T) {

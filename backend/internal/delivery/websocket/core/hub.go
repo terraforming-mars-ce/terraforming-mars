@@ -3,8 +3,8 @@ package core
 import (
 	"context"
 	"log/slog"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/logger"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/logger"
 )
 
 // MessageHandler defines the interface for handling different message types

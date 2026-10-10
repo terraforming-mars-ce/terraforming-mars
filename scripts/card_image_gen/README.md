@@ -157,7 +157,7 @@ Generated PNG masters are saved to `assets/original/cards/{id}.png` and register
 
 ## How It Works
 
-1. Reads card data from `backend/assets/terraforming_mars_cards.json`
+1. Reads card data from `backend/assets/cards.json`
 2. Builds a prompt from the card name, tags, and type using a consistent sci-fi Martian art style
 3. Sends a Flux Schnell workflow to ComfyUI's API (UNETLoader + DualCLIPLoader + VAELoader + KSampler)
 4. Retrieves the generated image, resizes to 960x720, and saves as WebP

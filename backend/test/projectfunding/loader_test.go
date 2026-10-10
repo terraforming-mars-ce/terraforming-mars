@@ -3,11 +3,11 @@ package projectfunding_test
 import (
 	"testing"
 
-	pfLoader "terraforming-mars-backend/internal/game/projectfunding"
-	"terraforming-mars-backend/test/testutil"
+	pfLoader "openmars/internal/game/projectfunding"
+	"openmars/test/testutil"
 )
 
-const jsonPath = "../../assets/terraforming_mars_project_funding.json"
+const jsonPath = "../../assets/project_funding.json"
 
 func TestLoadProjectsFromJSON_Success(t *testing.T) {
 	defs, err := pfLoader.LoadProjectsFromJSON(jsonPath)

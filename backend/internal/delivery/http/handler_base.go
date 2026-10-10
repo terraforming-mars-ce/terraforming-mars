@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/logger"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/logger"
 )
 
 // BaseHandler provides common functionality for all HTTP handlers

@@ -11,7 +11,7 @@ This skill provides efficient access to the Terraforming Mars card database.
 
 The card database is located at:
 ```
-backend/assets/terraforming_mars_cards.json
+backend/assets/cards.json
 ```
 
 This file contains 453 cards and should NOT be read directly (too large). Always use `jq` commands to query specific data.
@@ -51,63 +51,63 @@ Available packs: `base-game`, `corporate-era`, `prelude`, `venus-next`, `colonie
 
 ### Find a card by name (case-insensitive)
 ```bash
-jq '.[] | select(.name | test("Mining"; "i"))' backend/assets/terraforming_mars_cards.json
+jq '.[] | select(.name | test("Mining"; "i"))' backend/assets/cards.json
 ```
 
 ### Find a card by exact name
 ```bash
-jq '.[] | select(.name == "Mining Rights")' backend/assets/terraforming_mars_cards.json
+jq '.[] | select(.name == "Mining Rights")' backend/assets/cards.json
 ```
 
 ### Find a card by ID
 ```bash
-jq '.[] | select(.id == "001")' backend/assets/terraforming_mars_cards.json
+jq '.[] | select(.id == "001")' backend/assets/cards.json
 ```
 
 ### List all corporations
 ```bash
-jq '[.[] | select(.type == "corporation")] | .[] | {id, name, description}' backend/assets/terraforming_mars_cards.json
+jq '[.[] | select(.type == "corporation")] | .[] | {id, name, description}' backend/assets/cards.json
 ```
 
 ### Find corporation by name
 ```bash
-jq '.[] | select(.type == "corporation") | select(.name | test("Ecoline"; "i"))' backend/assets/terraforming_mars_cards.json
+jq '.[] | select(.type == "corporation") | select(.name | test("Ecoline"; "i"))' backend/assets/cards.json
 ```
 
 ### Find cards by type
 ```bash
-jq '[.[] | select(.type == "event")] | length' backend/assets/terraforming_mars_cards.json  # Count
-jq '[.[] | select(.type == "event")] | .[0:5]' backend/assets/terraforming_mars_cards.json  # First 5
+jq '[.[] | select(.type == "event")] | length' backend/assets/cards.json  # Count
+jq '[.[] | select(.type == "event")] | .[0:5]' backend/assets/cards.json  # First 5
 ```
 
 ### Find cards by tag
 ```bash
-jq '[.[] | select(.tags != null) | select(.tags | contains(["science"]))]' backend/assets/terraforming_mars_cards.json
+jq '[.[] | select(.tags != null) | select(.tags | contains(["science"]))]' backend/assets/cards.json
 ```
 
 ### Find cards by pack
 ```bash
-jq '[.[] | select(.pack == "venus-next")] | .[] | {name, type, cost}' backend/assets/terraforming_mars_cards.json
+jq '[.[] | select(.pack == "venus-next")] | .[] | {name, type, cost}' backend/assets/cards.json
 ```
 
 ### Find cards by cost range
 ```bash
-jq '[.[] | select(.cost >= 20 and .cost <= 30)] | .[] | {name, cost, type}' backend/assets/terraforming_mars_cards.json
+jq '[.[] | select(.cost >= 20 and .cost <= 30)] | .[] | {name, cost, type}' backend/assets/cards.json
 ```
 
 ### Find cards with specific requirements
 ```bash
-jq '[.[] | select(.requirements != null) | select(.requirements[] | .type == "oxygen")]' backend/assets/terraforming_mars_cards.json
+jq '[.[] | select(.requirements != null) | select(.requirements[] | .type == "oxygen")]' backend/assets/cards.json
 ```
 
 ### List all card names (quick reference)
 ```bash
-jq '[.[] | .name] | sort' backend/assets/terraforming_mars_cards.json
+jq '[.[] | .name] | sort' backend/assets/cards.json
 ```
 
 ### Get card summary (name, type, cost, tags)
 ```bash
-jq '.[] | select(.name | test("Birds"; "i")) | {name, type, cost, tags, description}' backend/assets/terraforming_mars_cards.json
+jq '.[] | select(.name | test("Birds"; "i")) | {name, type, cost, tags, description}' backend/assets/cards.json
 ```
 
 ## Usage Guidelines

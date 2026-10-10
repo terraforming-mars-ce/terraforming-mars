@@ -21,7 +21,7 @@ export async function bootServer(
   const source = new DOMParser().parseFromString(await response.text(), "text/html");
   const resolve = (path: string | null) => new URL(path ?? "", server.url).href;
 
-  window.__TM_GATEWAY__ = { alias: meta.alias, name: meta.name, servers };
+  window.__OPENMARS_GATEWAY__ = { alias: meta.alias, name: meta.name, servers };
 
   const scripts = [...source.querySelectorAll("script")];
   for (const original of scripts.filter((script) => script.type !== "module")) {

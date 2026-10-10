@@ -3,11 +3,11 @@ package cards
 import (
 	"fmt"
 
-	"terraforming-mars-backend/internal/game/award"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/milestone"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/award"
+	"openmars/internal/game/board"
+	"openmars/internal/game/milestone"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // BoardContext provides board and colony data for VP calculation.

@@ -8,17 +8,17 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"terraforming-mars-backend/internal/action"
-	baseaction "terraforming-mars-backend/internal/action"
-	cardAction "terraforming-mars-backend/internal/action/card"
-	gameaction "terraforming-mars-backend/internal/action/game"
-	resconvAction "terraforming-mars-backend/internal/action/resource_conversion"
-	spAction "terraforming-mars-backend/internal/action/standard_project"
-	turnmgmt "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/game/standardproject"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/action"
+	baseaction "openmars/internal/action"
+	cardAction "openmars/internal/action/card"
+	gameaction "openmars/internal/action/game"
+	resconvAction "openmars/internal/action/resource_conversion"
+	spAction "openmars/internal/action/standard_project"
+	turnmgmt "openmars/internal/action/turn_management"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
+	"openmars/internal/game/standardproject"
+	"openmars/test/testutil"
 )
 
 func TestPlayCardConsumesAction(t *testing.T) {
@@ -69,7 +69,7 @@ func TestZeroActionsBlocksStandardProject(t *testing.T) {
 	testutil.SetPlayerCredits(context.Background(), p, 100)
 
 	_, currentFile, _, _ := runtime.Caller(0)
-	stdProjPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "..", "assets", "terraforming_mars_standard_projects.json")
+	stdProjPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "..", "assets", "standard_projects.json")
 	stdProjData, _ := standardproject.LoadStandardProjectsFromJSON(stdProjPath)
 	stdProjRegistry := standardproject.NewInMemoryStandardProjectRegistry(stdProjData)
 

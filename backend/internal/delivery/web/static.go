@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"terraforming-mars-backend/internal/logger"
+	"openmars/internal/logger"
 )
 
 const (

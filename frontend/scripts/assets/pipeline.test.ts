@@ -9,7 +9,7 @@ import { buildAssets, safePath } from "./pipeline.ts";
 
 const roots: string[] = [];
 async function fixture() {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "tm-assets-test-"));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "openmars-assets-test-"));
   roots.push(root);
   await fs.mkdir(path.join(root, "assets/original"), { recursive: true });
   const image = await sharp({

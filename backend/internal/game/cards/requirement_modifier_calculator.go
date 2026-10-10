@@ -3,8 +3,8 @@ package cards
 import (
 	"slices"
 
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // CardLookup is a minimal interface for looking up cards by ID

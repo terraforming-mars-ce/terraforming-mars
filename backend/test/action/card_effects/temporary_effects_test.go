@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	baseaction "terraforming-mars-backend/internal/action"
-	cardAction "terraforming-mars-backend/internal/action/card"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	baseaction "openmars/internal/action"
+	cardAction "openmars/internal/action/card"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 // Synthetic test cards for requirement testing

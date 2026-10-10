@@ -4,12 +4,12 @@ import (
 	"context"
 	"log/slog"
 
-	connaction "terraforming-mars-backend/internal/action/connection"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/logger"
+	connaction "openmars/internal/action/connection"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/game"
+	"openmars/internal/game/shared"
+	"openmars/internal/logger"
 )
 
 // ChatMessageHandler handles chat message requests from players and spectators.

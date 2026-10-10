@@ -1,7 +1,7 @@
 package bot
 
 import (
-	"terraforming-mars-backend/internal/delivery/dto"
+	"openmars/internal/delivery/dto"
 )
 
 // IsMyTurn checks if it's currently the given player's turn to act.

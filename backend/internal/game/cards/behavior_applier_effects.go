@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/shared"
 )
 
 func (a *BehaviorApplier) applyEffectOutput(ctx context.Context, o *shared.EffectCondition, amount int, log *slog.Logger) error {

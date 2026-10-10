@@ -3,10 +3,10 @@ package game_lifecycle_test
 import (
 	"testing"
 
-	"terraforming-mars-backend/internal/action/connection"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/action/connection"
+	"openmars/internal/game"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func newSpectateAction(repo game.GameRepository) *connection.SpectateGameAction {

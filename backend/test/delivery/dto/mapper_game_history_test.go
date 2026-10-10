@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game/datastore"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/game/datastore"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func TestToGameHistoryEntryDtos_TotalVP_FromBreakdown(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"terraforming-mars-backend/internal/delivery/dto"
+	"openmars/internal/delivery/dto"
 )
 
 const (

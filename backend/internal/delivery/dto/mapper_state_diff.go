@@ -1,8 +1,8 @@
 package dto
 
 import (
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	"openmars/internal/game/shared"
 )
 
 // ToStateDiffDto converts a domain StateDiff to a DTO

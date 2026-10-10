@@ -6,12 +6,12 @@ import (
 	"log/slog"
 	"time"
 
-	"terraforming-mars-backend/internal/events"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/logger"
+	"openmars/internal/events"
+	"openmars/internal/game"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
+	"openmars/internal/logger"
 )
 
 // BaseAction provides common dependencies for all actions.

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"terraforming-mars-backend/internal/game"
+	"openmars/internal/game"
 )
 
 // SpectatorDisconnectedAction handles spectator disconnection by removing them from the game.

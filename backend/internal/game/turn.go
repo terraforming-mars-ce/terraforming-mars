@@ -2,7 +2,7 @@ package game
 
 import (
 	"log/slog"
-	"terraforming-mars-backend/internal/game/datastore"
+	"openmars/internal/game/datastore"
 )
 
 type Turn struct {

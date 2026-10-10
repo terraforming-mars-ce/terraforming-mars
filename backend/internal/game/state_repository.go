@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/shared"
 )
 
 // GameStateRepository manages game state with diff tracking

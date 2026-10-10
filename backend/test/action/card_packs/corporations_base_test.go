@@ -1,28 +1,28 @@
 package card_packs_test
 
 import (
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game/datastore"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/game/datastore"
 
 	"context"
-	baseaction "terraforming-mars-backend/internal/action"
-	awardaction "terraforming-mars-backend/internal/action/award"
-	colonyaction "terraforming-mars-backend/internal/action/colony"
-	"terraforming-mars-backend/internal/action/confirmation"
-	milestoneaction "terraforming-mars-backend/internal/action/milestone"
-	"terraforming-mars-backend/internal/action/standard_project"
-	"terraforming-mars-backend/internal/game/colony"
-	"terraforming-mars-backend/internal/game/standardproject"
+	baseaction "openmars/internal/action"
+	awardaction "openmars/internal/action/award"
+	colonyaction "openmars/internal/action/colony"
+	"openmars/internal/action/confirmation"
+	milestoneaction "openmars/internal/action/milestone"
+	"openmars/internal/action/standard_project"
+	"openmars/internal/game/colony"
+	"openmars/internal/game/standardproject"
 	"testing"
 	"time"
 
-	"terraforming-mars-backend/internal/action/admin"
-	cardAction "terraforming-mars-backend/internal/action/card"
-	tileAction "terraforming-mars-backend/internal/action/tile"
-	"terraforming-mars-backend/internal/events"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/action/admin"
+	cardAction "openmars/internal/action/card"
+	tileAction "openmars/internal/action/tile"
+	"openmars/internal/events"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func TestCrediCor_StartingResources(t *testing.T) {
@@ -568,12 +568,12 @@ func TestHelion_AllCreditPaymentContexts(t *testing.T) {
 			log := testutil.TestLogger()
 			testutil.AssertNoError(t, admin.NewSetCorporationAction(repo, registry, nil, log).Execute(ctx, g.ID(), id, "B03"), "Helion")
 			p.Resources().Set(shared.Resources{Heat: 50})
-			projects, err := standardproject.LoadStandardProjectsFromJSON("../../../assets/terraforming_mars_standard_projects.json")
+			projects, err := standardproject.LoadStandardProjectsFromJSON("../../../assets/standard_projects.json")
 			testutil.AssertNoError(t, err, "projects")
 			projectRegistry := standardproject.NewInMemoryStandardProjectRegistry(projects)
 			milestones := testutil.CreateTestMilestoneRegistry()
 			awards := testutil.CreateTestAwardRegistry()
-			colonyDefs, err := colony.LoadColoniesFromJSON("../../../assets/terraforming_mars_colonies.json")
+			colonyDefs, err := colony.LoadColoniesFromJSON("../../../assets/colonies.json")
 			testutil.AssertNoError(t, err, "colonies")
 			colonyRegistry := colony.NewInMemoryColonyRegistry(colonyDefs)
 			intent := baseaction.PaymentIntent{Action: kind}

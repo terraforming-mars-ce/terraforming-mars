@@ -3,14 +3,14 @@ package http
 import (
 	"net/http"
 
-	gameaction "terraforming-mars-backend/internal/action/game"
-	"terraforming-mars-backend/internal/action/query"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game/award"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/milestone"
-	httpmiddleware "terraforming-mars-backend/internal/middleware/http"
-	"terraforming-mars-backend/internal/service/bugreport"
+	gameaction "openmars/internal/action/game"
+	"openmars/internal/action/query"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/game/award"
+	"openmars/internal/game/cards"
+	"openmars/internal/game/milestone"
+	httpmiddleware "openmars/internal/middleware/http"
+	"openmars/internal/service/bugreport"
 
 	"github.com/gorilla/mux"
 )

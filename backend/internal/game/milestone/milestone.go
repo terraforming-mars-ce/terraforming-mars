@@ -1,8 +1,8 @@
 package milestone
 
 import (
-	"terraforming-mars-backend/internal/game/award"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/award"
+	"openmars/internal/game/shared"
 )
 
 // MilestoneDefinition is the static template loaded from JSON

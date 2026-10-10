@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"log/slog"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/logger"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/logger"
 )
 
 // BotRetrier lets the host give a failed bot another chance with the model.

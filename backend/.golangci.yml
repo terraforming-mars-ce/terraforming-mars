@@ -29,17 +29,17 @@ linters:
           files:
             - "**/internal/game/**"
           deny:
-            - pkg: terraforming-mars-backend/internal/action
+            - pkg: openmars/internal/action
               desc: "domain (internal/game) must not import the action layer — keep game <- action direction"
-            - pkg: terraforming-mars-backend/internal/delivery
+            - pkg: openmars/internal/delivery
               desc: "domain (internal/game) must not import the delivery layer — keep game <- delivery direction"
-            - pkg: terraforming-mars-backend/internal/logger
+            - pkg: openmars/internal/logger
               desc: "domain (internal/game) must not depend on the logger package — log via stdlib log/slog"
         usecases:
           files:
             - "**/internal/action/**"
           deny:
-            - pkg: terraforming-mars-backend/internal/delivery
+            - pkg: openmars/internal/delivery
               desc: "action (use cases) must not import the delivery layer — keep action <- delivery direction"
 
 issues:

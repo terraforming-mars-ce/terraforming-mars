@@ -3,7 +3,7 @@ package cards
 import (
 	"slices"
 
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/shared"
 )
 
 // MatchesSelector checks if a card matches a single selector.

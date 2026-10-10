@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/game"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 func TestStateRepository_WriteInitialState(t *testing.T) {

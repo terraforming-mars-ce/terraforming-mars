@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	baseaction "terraforming-mars-backend/internal/action"
-	gameaction "terraforming-mars-backend/internal/action/game"
-	"terraforming-mars-backend/internal/action/resource_conversion"
+	baseaction "openmars/internal/action"
+	gameaction "openmars/internal/action/game"
+	"openmars/internal/action/resource_conversion"
 
-	"terraforming-mars-backend/internal/game"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	playerPkg "terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game"
+	gamecards "openmars/internal/game/cards"
+	playerPkg "openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // ConfirmProductionCardsAction handles the business logic for confirming production card selection

@@ -1,9 +1,9 @@
 package game
 
 import (
+	"openmars/internal/game/board"
+	"openmars/internal/game/shared"
 	"slices"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/shared"
 )
 
 type VPCardInfo struct {

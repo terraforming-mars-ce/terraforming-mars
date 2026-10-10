@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"terraforming-mars-backend/internal/delivery/dto"
+	"openmars/internal/delivery/dto"
 )
 
 const maxGrudgeRecent = 4

@@ -4,11 +4,11 @@ import (
 	"strings"
 	"testing"
 
-	"terraforming-mars-backend/internal/game/cards"
+	"openmars/internal/game/cards"
 )
 
 func TestNoResourceRemovalsInInputs(t *testing.T) {
-	allCards, err := cards.LoadCardsFromJSON("../../../assets/terraforming_mars_cards.json")
+	allCards, err := cards.LoadCardsFromJSON("../../../assets/cards.json")
 	if err != nil {
 		t.Fatalf("Failed to load cards: %v", err)
 	}

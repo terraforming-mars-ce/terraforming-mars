@@ -2,7 +2,7 @@
 
 > **Progress source:** Use the [deduplicated progress tracker](broken_cards_verify_checklist.md) for current counts and verification status. Historical completed groups below are implementation records, not a claim of complete verification. The active baseline is 64 fix candidates after excluding Small Asteroid (Promo) and Mass Converter (already correct).
 
-> **CRITICAL: Before applying ANY fix from this plan, verify the requested change against the card's `description` field in `terraforming_mars_cards.json`. The card description is the source of truth. It is NOT allowed to change a card's description to match the planned fix. If the planned fix contradicts the card description, mark the group task as `[x]` (done) but add a note to the "Description Mismatches" section at the bottom of this file explaining the discrepancy.**
+> **CRITICAL: Before applying ANY fix from this plan, verify the requested change against the card's `description` field in `cards.json`. The card description is the source of truth. It is NOT allowed to change a card's description to match the planned fix. If the planned fix contradicts the card description, mark the group task as `[x]` (done) but add a note to the "Description Mismatches" section at the bottom of this file explaining the discrepancy.**
 
 66 baseline cards grouped by the type of fix required (including one already-correct entry and one now-excluded Promo card). Groups are ordered from simplest (JSON-only) to most complex (new backend features + new tile types). Each group targets a **generic capability** so the fix applies to all similar cards.
 
@@ -21,7 +21,7 @@ New tile types use **purple placeholder hexes** with text labels instead of 3D m
 
 ## TIER 1: JSON-Only Data Fixes
 
-No code changes needed. Fix values in `terraforming_mars_cards.json`.
+No code changes needed. Fix values in `cards.json`.
 
 ---
 

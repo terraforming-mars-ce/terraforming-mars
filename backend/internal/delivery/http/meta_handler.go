@@ -3,7 +3,7 @@ package http
 import (
 	"net/http"
 
-	"terraforming-mars-backend/internal/delivery/dto"
+	"openmars/internal/delivery/dto"
 )
 
 // MetaHandler serves the identity a gateway uses to list and verify this server

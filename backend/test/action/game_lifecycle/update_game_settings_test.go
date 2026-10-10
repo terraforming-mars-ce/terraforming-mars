@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	gameAction "terraforming-mars-backend/internal/action/game"
-	gamePkg "terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	gameAction "openmars/internal/action/game"
+	gamePkg "openmars/internal/game"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 )
 
 type updateSettingsTestRig struct {

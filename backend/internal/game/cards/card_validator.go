@@ -2,11 +2,11 @@ package cards
 
 import (
 	"fmt"
-	"terraforming-mars-backend/internal/game/board"
+	"openmars/internal/game/board"
 
-	"terraforming-mars-backend/internal/game/global_parameters"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/global_parameters"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 )
 
 // ValidateCardCanBePlayed checks if a card can be played in the current game context

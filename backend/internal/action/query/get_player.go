@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/player"
+	"openmars/internal/game"
+	"openmars/internal/game/player"
 )
 
 // GetPlayerAction handles querying a single player

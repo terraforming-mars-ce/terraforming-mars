@@ -5,12 +5,12 @@ import (
 	"strings"
 	"testing"
 
-	gameAction "terraforming-mars-backend/internal/action/game"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/datastore"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/test/testutil"
+	gameAction "openmars/internal/action/game"
+	"openmars/internal/game"
+	"openmars/internal/game/board"
+	"openmars/internal/game/datastore"
+	"openmars/internal/game/shared"
+	"openmars/test/testutil"
 
 	"github.com/google/uuid"
 )

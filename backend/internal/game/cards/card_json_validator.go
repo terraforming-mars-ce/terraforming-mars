@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/shared"
 )
 
 // ValidateCardJSON validates the JSON structure of a card at load time

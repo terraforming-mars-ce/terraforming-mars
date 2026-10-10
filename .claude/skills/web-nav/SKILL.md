@@ -1,11 +1,11 @@
 ---
 name: web-nav
-description: Navigate and interact with the Terraforming Mars frontend using Playwright CLI. This skill should be used when the user wants to view, test, or interact with the web application in a browser. Supports headless browser navigation to known pages (cards, create, join, game) and custom URLs. Defaults to localhost:3000.
+description: Navigate and interact with the Open Mars frontend using Playwright CLI. This skill should be used when the user wants to view, test, or interact with the web application in a browser. Supports headless browser navigation to known pages (cards, create, join, game) and custom URLs. Defaults to localhost:3000.
 ---
 
 # Web Navigation Skill
 
-Navigate and interact with the Terraforming Mars web frontend using the `playwright-cli` command-line tool.
+Navigate and interact with the Open Mars web frontend using the `playwright-cli` command-line tool.
 
 ## Prerequisites
 

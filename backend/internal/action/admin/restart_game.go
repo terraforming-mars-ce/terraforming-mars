@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"log/slog"
 
-	baseaction "terraforming-mars-backend/internal/action"
-	gameAction "terraforming-mars-backend/internal/action/game"
-	turnAction "terraforming-mars-backend/internal/action/turn_management"
-	"terraforming-mars-backend/internal/game"
-	gamecards "terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/game/shared"
+	baseaction "openmars/internal/action"
+	gameAction "openmars/internal/action/game"
+	turnAction "openmars/internal/action/turn_management"
+	"openmars/internal/game"
+	gamecards "openmars/internal/game/cards"
+	"openmars/internal/game/shared"
 )
 
 // BotGameStopper stops all bot sessions of a game.

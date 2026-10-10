@@ -1,6 +1,6 @@
 # Card System Architecture
 
-This document explains the complete card effect system architecture in the Terraforming Mars backend.
+This document explains the complete card effect system architecture in the Open Mars backend.
 
 ## Table of Contents
 
@@ -48,7 +48,7 @@ The card system is designed to be **JSON-driven**, meaning **90%+ of cards can b
 ```
 backend/
 ├── assets/
-│   └── terraforming_mars_cards.json    # Card definitions (manually edited)
+│   └── cards.json    # Card definitions (manually edited)
 ├── internal/
 │   ├── cards/                           # Card data (outside game)
 │   │   ├── registry.go                  # Card lookup by ID
@@ -72,7 +72,7 @@ backend/
 
 ### Card Structure
 
-Cards are defined in `/backend/assets/terraforming_mars_cards.json`:
+Cards are defined in `/backend/assets/cards.json`:
 
 ```json
 {
@@ -369,7 +369,7 @@ If valid: PlayCardAction applies effects
 
 **Just edit JSON** - no Go code required!
 
-1. Open `/backend/assets/terraforming_mars_cards.json`
+1. Open `/backend/assets/cards.json`
 2. Add card definition with behaviors
 3. Run `just generate` to sync TypeScript types
 4. Test by playing the card

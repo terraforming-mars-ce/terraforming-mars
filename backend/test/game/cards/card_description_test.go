@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/game/cards"
+	"openmars/test/testutil"
 )
 
 func descriptionErrors(description cards.CardDescription) []error {
@@ -102,7 +102,7 @@ func TestCardDescriptionPlainText(t *testing.T) {
 }
 
 func TestCardDatabaseDescriptions(t *testing.T) {
-	allCards, err := cards.LoadCardsFromJSON("../../../assets/terraforming_mars_cards.json")
+	allCards, err := cards.LoadCardsFromJSON("../../../assets/cards.json")
 	if err != nil {
 		t.Fatalf("Failed to load cards: %v", err)
 	}

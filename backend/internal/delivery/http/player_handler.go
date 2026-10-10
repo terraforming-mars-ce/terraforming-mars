@@ -5,10 +5,10 @@ import (
 	"log/slog"
 	"net/http"
 
-	"terraforming-mars-backend/internal/action/query"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/game/cards"
-	"terraforming-mars-backend/internal/logger"
+	"openmars/internal/action/query"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/game/cards"
+	"openmars/internal/logger"
 
 	"github.com/gorilla/mux"
 )

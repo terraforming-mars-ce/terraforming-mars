@@ -3,8 +3,8 @@ package board_test
 import (
 	"testing"
 
-	"terraforming-mars-backend/internal/game/board"
-	"terraforming-mars-backend/internal/game/shared"
+	"openmars/internal/game/board"
+	"openmars/internal/game/shared"
 )
 
 func TestGenerateMarsBoard_NoctisCityTaggedTile(t *testing.T) {

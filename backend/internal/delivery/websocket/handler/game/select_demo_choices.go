@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"log/slog"
 
-	gameaction "terraforming-mars-backend/internal/action/game"
-	"terraforming-mars-backend/internal/delivery/dto"
-	"terraforming-mars-backend/internal/delivery/websocket/core"
-	"terraforming-mars-backend/internal/game/shared"
-	"terraforming-mars-backend/internal/logger"
+	gameaction "openmars/internal/action/game"
+	"openmars/internal/delivery/dto"
+	"openmars/internal/delivery/websocket/core"
+	"openmars/internal/game/shared"
+	"openmars/internal/logger"
 )
 
 // SelectDemoChoicesHandler handles demo lobby card selection requests

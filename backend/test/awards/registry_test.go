@@ -5,13 +5,13 @@ import (
 	"runtime"
 	"testing"
 
-	"terraforming-mars-backend/internal/game/award"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/game/award"
+	"openmars/test/testutil"
 )
 
 func jsonPath() string {
 	_, currentFile, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(currentFile), "..", "..", "assets", "terraforming_mars_awards.json")
+	return filepath.Join(filepath.Dir(currentFile), "..", "..", "assets", "awards.json")
 }
 
 func TestLoadAwardsFromJSON(t *testing.T) {

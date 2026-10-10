@@ -3,11 +3,11 @@ package cards
 import (
 	"fmt"
 	"math"
+	"openmars/internal/game"
+	"openmars/internal/game/player"
+	"openmars/internal/game/shared"
 	"slices"
 	"sort"
-	"terraforming-mars-backend/internal/game"
-	"terraforming-mars-backend/internal/game/player"
-	"terraforming-mars-backend/internal/game/shared"
 )
 
 // PaymentContext describes the cost being paid, not the card granting an exchange.

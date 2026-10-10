@@ -78,7 +78,7 @@ backend/server
 
 # Claude local settings
 /claude/*\.local\.*
-terraforming-mars.iml
+openmars.iml
 /backend/bin
 
 # Python bytecode

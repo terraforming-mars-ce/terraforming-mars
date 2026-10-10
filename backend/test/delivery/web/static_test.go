@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"terraforming-mars-backend/internal/delivery/web"
-	"terraforming-mars-backend/test/testutil"
+	"openmars/internal/delivery/web"
+	"openmars/test/testutil"
 )
 
 const shellBody = "<!doctype html><title>shell</title>"
@@ -34,7 +34,7 @@ func newHandler(t *testing.T) http.Handler {
 	testutil.AssertNoError(t, zw.Close(), "gzip close")
 
 	write("index.html", []byte(shellBody))
-	write("manifest.json", []byte(`{"name":"tm"}`))
+	write("manifest.json", []byte(`{"name":"openmars"}`))
 	write("assets/index-abc.js", []byte(appJS))
 	write("assets/index-abc.js.gz", gz.Bytes())
 	write("assets/textures/mars.webp", []byte("0123456789"))
